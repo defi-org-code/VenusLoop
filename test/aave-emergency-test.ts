@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { USDC } from "../src/token";
 import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
+import { contract } from "../src/extensions";
 
 describe("AaveLoop Emergency Tests", () => {
   beforeEach(async () => {
@@ -34,28 +35,28 @@ describe("AaveLoop Emergency Tests", () => {
     expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
     expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
   });
-  //
-  // it("emergency function delegate call", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //
-  //   const compoundLoopAddress = "0x8bd210Fff94C41640F1Fd3E6A6063d04e2f10eEb";
-  //   const compoundLoopABI = [
-  //     {
-  //       inputs: [],
-  //       name: "safeTransferUSDCToOwner",
-  //       outputs: [],
-  //       stateMutability: "nonpayable",
-  //       type: "function",
-  //     },
-  //   ];
-  //   const compoundLoop = contract(compoundLoopABI, compoundLoopAddress);
-  //
-  //   const encoded = await compoundLoop.methods["safeTransferUSDCToOwner"]().encodeABI();
-  //   await venusloop.methods.emergencyFunctionDelegateCall(compoundLoopAddress, encoded).send({ from: owner });
-  //
-  //   expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
-  //   expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
-  // });
+
+  it.skip("emergency function delegate call", async () => {
+    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+
+    const compoundLoopAddress = "0x8bd210Fff94C41640F1Fd3E6A6063d04e2f10eEb"; // TODO not existing in bsc, find another
+    const compoundLoopABI = [
+      {
+        inputs: [],
+        name: "safeTransferUSDCToOwner",
+        outputs: [],
+        stateMutability: "nonpayable",
+        type: "function",
+      },
+    ];
+    const compoundLoop = contract(compoundLoopABI, compoundLoopAddress);
+
+    const encoded = await compoundLoop.methods["safeTransferUSDCToOwner"]().encodeABI();
+    await venusloop.methods.emergencyFunctionDelegateCall(compoundLoopAddress, encoded).send({ from: owner });
+
+    expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
+    expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
+  });
   //
   // it("exit position one by one manually", async () => {
   //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
