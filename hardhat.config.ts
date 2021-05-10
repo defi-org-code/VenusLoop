@@ -31,7 +31,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        blockNumber: 7298400,
+        blockNumber: 7298897,
         url: "https://bsc-dataseed.binance.org/",
       },
       blockGasLimit: 12e6,

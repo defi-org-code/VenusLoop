@@ -10,14 +10,12 @@ import "@openzeppelin/contracts/utils/Address.sol";
 contract VenusLoop is Ownable {
     using SafeERC20 for IERC20;
 
-    //    // ---- fields ----
-    //    address public constant USDC = address(0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d);
-    //    address public constant LENDING_POOL = address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
-    //    address public constant VUSDC = address(0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8); // Venus vUSDC
-    //    address public constant REWARD_TOKEN = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5); // stkAAVE
-    //    address public constant DEBT_TOKEN = address(0x619beb58998eD2278e08620f97007e1116D5D25b); // Aave variable debt bearing USDC (variableD...)
-    //    address public constant LIQUIDITY_MINING = address(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5); // IncentivesController
-    //    uint256 public constant BASE_PERCENT = 10_000;
+    // ---- fields ----
+    address public constant USDC = address(0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d);
+    address public constant VUSDC = address(0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8); // Venus vUSDC
+    address public constant LENDING_POOL = address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
+    address public constant REWARD_TOKEN = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
+
     //
     //    // ---- events ----
     //    event LogDeposit(uint256 amount);
@@ -25,12 +23,13 @@ contract VenusLoop is Ownable {
     //    event LogBorrow(uint256 amount);
     //    event LogRepay(uint256 amount);
     //
-    //    // ---- Constructor ----
-    //
-    //    constructor(address owner) {
-    //        transferOwnership(owner);
-    //        IERC20(USDC).safeApprove(LENDING_POOL, type(uint256).max);
-    //    }
+    // ---- Constructor ----
+
+    constructor(address owner) {
+        transferOwnership(owner);
+        //        IERC20(USDC).safeApprove(LENDING_POOL, type(uint256).max);
+    }
+
     //
     //    // ---- views ----
     //
@@ -140,18 +139,18 @@ contract VenusLoop is Ownable {
     //        return addresses;
     //    }
     //
-    //    // ---- emergency ----
-    //
-    //    function withdrawToOwner(address asset) public onlyOwner {
-    //        uint256 balance = IERC20(asset).balanceOf(address(this));
-    //        IERC20(asset).safeTransfer(owner(), balance);
-    //    }
-    //
-    //    function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
-    //        Address.functionCall(target, data);
-    //    }
-    //
-    //    function emergencyFunctionDelegateCall(address target, bytes memory data) external onlyOwner {
-    //        Address.functionDelegateCall(target, data);
-    //    }
+    // ---- emergency ----
+
+    function withdrawToOwner(address asset) public onlyOwner {
+        //        uint256 balance = IERC20(asset).balanceOf(address(this));
+        //        IERC20(asset).safeTransfer(owner(), balance);
+    }
+
+    function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
+        Address.functionCall(target, data);
+    }
+
+    function emergencyFunctionDelegateCall(address target, bytes memory data) external onlyOwner {
+        Address.functionDelegateCall(target, data);
+    }
 }

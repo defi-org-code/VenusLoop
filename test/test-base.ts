@@ -7,11 +7,11 @@ import { expect } from "chai";
 import { VenusLoop } from "../typechain-hardhat/VenusLoop";
 import { USDC } from "../src/token";
 
-export const usdcWhale = "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8";
+export const usdcWhale = "0xF977814e90dA44bFA03b6295A0616a897441aceC";
 
 export let deployer: string;
 export let owner: string;
-export let aaveloop: VenusLoop;
+export let venusloop: VenusLoop;
 export const POSITION = bn6("5,000,000");
 
 export async function initOwnerAndUSDC() {
@@ -32,7 +32,7 @@ async function doInitState() {
   await initWallet();
 
   owner = (await Wallet.fake(1)).address;
-  aaveloop = await deployContract<VenusLoop>("AaveLoop", { from: deployer }, [owner]);
+  venusloop = await deployContract<VenusLoop>("VenusLoop", { from: deployer }, [owner]);
 
   await ensureBalanceUSDC(owner, POSITION);
 }
@@ -64,7 +64,8 @@ export async function expectRevert(fn: () => any) {
 }
 
 export async function expectOutOfPosition() {
-  // expect(await aaveloop.methods.getBalanceAUSDC().call()).bignumber.zero;
-  // expect(await aaveloop.methods.getBalanceDebtToken().call()).bignumber.zero;
-  // expect((await aaveloop.methods.getPositionData().call()).ltv).bignumber.zero;
+  // TODO
+  // expect(await venusloop.methods.getBalanceAUSDC().call()).bignumber.zero;
+  // expect(await venusloop.methods.getBalanceDebtToken().call()).bignumber.zero;
+  // expect((await venusloop.methods.getPositionData().call()).ltv).bignumber.zero;
 }
