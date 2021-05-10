@@ -29,14 +29,13 @@ describe("AaveLoop Emergency Tests", () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
     const encoded = USDC().methods.transfer(owner, POSITION).encodeABI();
-    console.log(encoded);
     await venusloop.methods.emergencyFunctionCall(USDC().options.address, encoded).send({ from: owner });
 
     expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
     expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
   });
 
-  it.skip("emergency function delegate call", async () => {
+  it("emergency function delegate call", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
     const compoundLoopAddress = "0x8bd210Fff94C41640F1Fd3E6A6063d04e2f10eEb"; // TODO not existing in bsc, find another

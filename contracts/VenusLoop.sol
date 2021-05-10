@@ -28,7 +28,6 @@ contract VenusLoop is Ownable {
 
     constructor(address owner) {
         transferOwnership(owner);
-        _enterMarkets();
         // TODO
         //                IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
     }
