@@ -8,6 +8,10 @@ export function USDC() {
   return newToken("$USDC", "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d");
 }
 
+export function XVS() {
+  //TODO //return newToken("$USDC", "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d");
+}
+
 export interface Token extends ERC20 {
   displayName: string;
 }
