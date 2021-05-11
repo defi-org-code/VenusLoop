@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { USDC } from "../src/token";
 import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 import { contract } from "../src/extensions";
+import { Wallet } from "../src/wallet";
 
 describe("AaveLoop Emergency Tests", () => {
   beforeEach(async () => {
@@ -36,25 +37,21 @@ describe("AaveLoop Emergency Tests", () => {
   });
 
   it("emergency function delegate call", async () => {
-    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-
-    const compoundLoopAddress = "0x8bd210Fff94C41640F1Fd3E6A6063d04e2f10eEb"; // TODO not existing in bsc, find another
-    const compoundLoopABI = [
-      {
-        inputs: [],
-        name: "safeTransferUSDCToOwner",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
+    
+    const XVS = "0xcf6bb5389c92bdda8a3747ddb454cb7a64626c63"; // TODO not existing in bsc, find another
+    const xvsABI = [
+      {"constant":false,"inputs":
+      [{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}
     ];
-    const compoundLoop = contract(compoundLoopABI, compoundLoopAddress);
+    const xvs = contract(xvsABI, XVS);
 
-    const encoded = await compoundLoop.methods["safeTransferUSDCToOwner"]().encodeABI();
-    await venusloop.methods.emergencyFunctionDelegateCall(compoundLoopAddress, encoded).send({ from: owner });
+    const fakeOwner = await Wallet.fake(2);
+    const encoded = await xvs.methods["transferOwnership"](fakeOwner.address).encodeABI();
+    await venusloop.methods.emergencyFunctionDelegateCall(XVS, encoded).send({ from: owner });
 
-    expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
-    expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
+    // expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
+    // expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
+    expect(await venusloop.methods.owner().call()).eq(fakeOwner.address);
   });
   //
   // it("exit position one by one manually", async () => {
