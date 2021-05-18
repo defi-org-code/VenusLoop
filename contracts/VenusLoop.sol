@@ -72,7 +72,7 @@ contract VenusLoop is Ownable {
     }
 
     function claimRewardsToOwner() external {
-        IComptroller(UNITROLLER).claimVenus(address(this)); // TODO VAI?
+        IComptroller(UNITROLLER).claimVenus(address(this)); 
         IERC20(XVS).transfer(owner(), getBalanceXVS());
     }
 
@@ -124,6 +124,7 @@ contract VenusLoop is Ownable {
         IComptroller(UNITROLLER).enterMarkets(markets);
     }
 
+    // TODO: check amount in which token (USDC? in all)
     function _deposit(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
         emit LogDeposit(amount);
