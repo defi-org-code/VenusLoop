@@ -32,7 +32,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         // blockNumber: 7298897,
-        url: "https://bsc-dataseed.binance.org/",
+        url: "https://bsc-dataseed1.defibit.io", 
       },
       blockGasLimit: 12e6,
       accounts: {
@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
     },
     bsc: {
       chainId: 56,
-      url: "https://bsc-dataseed.binance.org/",
+      url: "https://bsc-dataseed1.defibit.io",
     },
   },
   typechain: {

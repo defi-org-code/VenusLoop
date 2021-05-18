@@ -4,36 +4,41 @@ import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 import { contract } from "../src/extensions";
 import { Wallet } from "../src/wallet";
 
-describe("AaveLoop Emergency Tests", () => {
+describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {
     await initOwnerAndUSDC();
   });
 
-  // it("owner able to call step by step", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //
-  //   await venusloop.methods._deposit(100).send({ from: owner });
-  //   await venusloop.methods._borrow(50).send({ from: owner });
-  //   await venusloop.methods._repay(50).send({ from: owner });
-  //   await venusloop.methods._withdraw(100).send({ from: owner });
-  //
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.eq(POSITION);
-  // });
-  //
-  // it("withdrawAllUSDCToOwner", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //   await venusloop.methods.withdrawAllUSDCToOwner().send({ from: owner });
-  //   expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
-  // });
-  //
+  it.only("owner able to call step by step", async () => {
+    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    //expect(await USDC().methods.balanceOf(venusloop.options.address)).eq(POSITION);
+
+    // //await venusloop.methods._deposit(100).send({ from: owner });
+    // await venusloop.methods._borrow(50).send({ from: owner });
+    // await venusloop.methods._repay(50).send({ from: owner });
+    // await venusloop.methods._withdraw(100).send({ from: owner });
+    //expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.eq(POSITION);
+  });
+
+  it("withdrawAllUSDCToOwner", async () => {
+    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    await venusloop.methods.withdrawAllUSDCToOwner().send({ from: owner });
+    expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
+  });
+
   it("emergency function call", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
     const encoded = USDC().methods.transfer(owner, POSITION).encodeABI();
     await venusloop.methods.emergencyFunctionCall(USDC().options.address, encoded).send({ from: owner });
 
-    expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
-    expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
+    const venusLoopBalance = await USDC().methods.balanceOf(venusloop.options.address).call();
+    console.log("USDC venusLoopBalance", venusLoopBalance);
+    expect(venusLoopBalance).bignumber.zero;
+
+    const ownerBalance = await USDC().methods.balanceOf(owner).call();
+    console.log("USDC ownerBalance", ownerBalance);
+    expect(ownerBalance).bignumber.eq(POSITION);
   });
 
   it("emergency function delegate call", async () => {
@@ -54,7 +59,7 @@ describe("AaveLoop Emergency Tests", () => {
     const encoded = await xvs.methods["transferOwnership"](fakeOwner.address).encodeABI();
     await venusloop.methods.emergencyFunctionDelegateCall(XVS().options.address, encoded).send({ from: owner });
 
-    // expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
+    expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
     // expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
     expect(await venusloop.methods.owner().call()).eq(fakeOwner.address);
   });

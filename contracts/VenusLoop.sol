@@ -82,15 +82,15 @@ contract VenusLoop is Ownable {
         uint256 balanceUSDC = getBalanceUSDC();
         require(balanceUSDC > 0, "insufficient funds");
 
-        //        for (uint256 i = 0; i < iterations; i++) {
-        //            _deposit(balanceUSDC);
-        //            (, , , , uint256 ltv, ) = getPositionData();
-        //            uint256 borrowAmount = (balanceUSDC * ltv) / BASE_PERCENT;
-        //            _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
-        //            balanceUSDC = getBalanceUSDC();
-        //        }
-        //
-        //        _deposit(balanceUSDC);
+        for (uint256 i = 0; i < iterations; i++) {
+            _deposit(balanceUSDC);
+            //(, , , , uint256 ltv, ) = getPositionData();
+            //uint256 borrowAmount = (balanceUSDC * ltv) / BASE_PERCENT;
+            // _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
+            // balanceUSDC = getBalanceUSDC();
+        }
+
+        //_deposit(balanceUSDC);
     }
 
     /**
