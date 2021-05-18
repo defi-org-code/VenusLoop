@@ -9,7 +9,7 @@ describe("VenusLoop Emergency Tests", () => {
     await initOwnerAndUSDC();
   });
 
-  it.only("owner able to call step by step", async () => {
+  it("owner able to call step by step", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
     //expect(await USDC().methods.balanceOf(venusloop.options.address)).eq(POSITION);
 
