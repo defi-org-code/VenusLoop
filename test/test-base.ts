@@ -64,8 +64,12 @@ export async function expectRevert(fn: () => any) {
 }
 
 export async function expectOutOfPosition() {
-  // TODO
-  // expect(await venusloop.methods.getBalanceAUSDC().call()).bignumber.zero;
-  // expect(await venusloop.methods.getBalanceDebtToken().call()).bignumber.zero;
-  // expect((await venusloop.methods.getPositionData().call()).ltv).bignumber.zero;
+  expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.zero;
+
+  expect(await venusloop.methods.getBorrowBalanceCurrent().call()).bignumber.zero;
+
+  const al = await venusloop.methods.getAccountLiquidity().call();
+  expect(al.err).bignumber.zero;
+  expect(al.liquidity).bignumber.zero;
+  expect(al.shortfall).bignumber.zero;
 }
