@@ -50,6 +50,11 @@ contract VenusLoop is Ownable {
         return IComptroller(UNITROLLER).venusAccrued(address(this));
     }
 
+    /* This cannot be a view function as it updates state. Use the custom ABI hack to viewit on bscscan */
+    function getBorrowBalanceCurrent() public returns (uint256) {
+        return IVToken(VUSDC).borrowBalanceCurrent(address(this));
+    }
+
     function getAccountLiquidity()
         public
         view
@@ -64,15 +69,8 @@ contract VenusLoop is Ownable {
 
     // ---- unrestricted ----
 
-    /**
-     * This cannot be a view function as it updates state. Use the custom ABI hack to view it on bscscan
-     */
-    function borrowBalanceCurrent() public returns (uint256) {
-        return IVToken(VUSDC).borrowBalanceCurrent(address(this));
-    }
-
     function claimRewardsToOwner() external {
-        IComptroller(UNITROLLER).claimVenus(address(this)); 
+        IComptroller(UNITROLLER).claimVenus(address(this));
         IERC20(XVS).transfer(owner(), getBalanceXVS());
     }
 
