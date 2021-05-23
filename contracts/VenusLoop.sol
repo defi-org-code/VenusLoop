@@ -5,11 +5,10 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./IVenusInterfaces.sol";
 
-contract VenusLoop is Ownable {
+contract VenusLoop {
     using SafeERC20 for IERC20;
 
     // ---- fields ----
@@ -17,8 +16,8 @@ contract VenusLoop is Ownable {
     address public constant VUSDC = address(0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8);
     address public constant UNITROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant XVS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
-    uint256 public constant PCM = 100_000; // percentmil, 1/100,000
-    //    address public immutable owner;
+    uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
+    address public immutable owner;
 
     // ---- events ----
     event LogDeposit(uint256 amount);
@@ -28,18 +27,17 @@ contract VenusLoop is Ownable {
 
     // ---- constructor ----
     constructor(address _owner) {
-        //        owner = _owner;
-        transferOwnership(_owner);
+        owner = _owner;
         // TODO
         // IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
     }
 
     // ---- modifiers ----
 
-    //    modifier onlyOwner() {
-    //        require(msg.sender == owner, "onlyOwner");
-    //        _;
-    //    }
+    modifier onlyOwner() {
+        require(msg.sender == owner, "onlyOwner");
+        _;
+    }
 
     // ---- views ----
 
@@ -94,7 +92,7 @@ contract VenusLoop is Ownable {
 
     function claimRewardsToOwner() external {
         IComptroller(UNITROLLER).claimVenus(address(this));
-        IERC20(XVS).safeTransfer(owner(), getBalanceXVS());
+        IERC20(XVS).safeTransfer(owner, getBalanceXVS());
     }
 
     // ---- main ----
@@ -169,24 +167,25 @@ contract VenusLoop is Ownable {
         emit LogRepay(amount);
     }
 
-    function _depositAndBorrow(uint256 amount, uint256 ratiopcm) public onlyOwner {
+    function _depositAndBorrow(uint256 amount, uint256 ratiopcm) public onlyOwner returns (uint256 borrowedAmount) {
         _deposit(amount);
         //(, uint256 liquidity, ) = getAccountLiquidity();
-        uint256 balance = getBalanceVUSDC();
-
-        uint256 borrowRate = IVToken(VUSDC).borrowRatePerBlock();
-
-        uint256 borrowAmount = balance * borrowRate;
-
-        _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
-        return borrowAmount;
+        //        uint256 balance = getBalanceVUSDC();
+        //
+        //        uint256 borrowRate = IVToken(VUSDC).borrowRatePerBlock();
+        //
+        //        uint256 borrowAmount = balance * borrowRate;
+        //
+        //        _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
+        //        return borrowAmount;
+        return 0;
     }
 
     // ---- emergency ----
 
     function withdrawToOwner(address asset) public onlyOwner {
         uint256 balance = IERC20(asset).balanceOf(address(this));
-        IERC20(asset).safeTransfer(owner(), balance);
+        IERC20(asset).safeTransfer(owner, balance);
     }
 
     function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {

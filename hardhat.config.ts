@@ -5,8 +5,7 @@ import "hardhat-tracer";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import { task } from "hardhat/config";
-import { configFile } from "./src/configFile";
-import { bn18 } from "./src/utils";
+import { bn18, configFile } from "./src/utils";
 import { askAddress, deploy } from "./src/deploy";
 
 task("deploy").setAction(async () => {
@@ -31,8 +30,8 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        // blockNumber: 7298897,
-        url: "https://bsc-dataseed1.defibit.io", 
+        blockNumber: 7657910,
+        url: "https://bsc-dataseed.binance.org",
       },
       blockGasLimit: 12e6,
       accounts: {
@@ -41,7 +40,7 @@ const config: HardhatUserConfig = {
     },
     bsc: {
       chainId: 56,
-      url: "https://bsc-dataseed1.defibit.io",
+      url: "https://bsc-dataseed.binance.org",
     },
   },
   typechain: {
@@ -49,7 +48,7 @@ const config: HardhatUserConfig = {
     target: "web3-v1",
   },
   mocha: {
-    timeout: 240_000,
+    timeout: 500_000,
     retries: 1,
     bail: true,
   },

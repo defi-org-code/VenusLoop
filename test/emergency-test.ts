@@ -1,8 +1,9 @@
 import { expect } from "chai";
-import { USDC, XVS } from "../src/token";
+import { newToken, USDC, XVS } from "../src/token";
 import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 import { contract } from "../src/extensions";
 import { Wallet } from "../src/wallet";
+import { IVToken } from "../typechain-hardhat/IVToken";
 
 describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {
@@ -42,27 +43,16 @@ describe("VenusLoop Emergency Tests", () => {
   });
 
   it("emergency function delegate call", async () => {
-    const xvsABI = [
-      {
-        constant: false,
-        inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
-        name: "transferOwnership",
-        outputs: [],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ];
-    const xvs = contract(xvsABI, XVS().options.address);
+    const vusdc = contract<IVToken>(
+      require("../artifacts/contracts/IVenusInterfaces.sol/IVToken.json").abi,
+      "0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8"
+    );
+    const encoded = vusdc.methods.mint(1000).encodeABI();
+    await venusloop.methods.emergencyFunctionDelegateCall(vusdc.options.address, encoded).send({ from: owner });
 
-    const fakeOwner = await Wallet.fake(2);
-    const encoded = await xvs.methods["transferOwnership"](fakeOwner.address).encodeABI();
-    await venusloop.methods.emergencyFunctionDelegateCall(XVS().options.address, encoded).send({ from: owner });
-
-    expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
-    // expect(await USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
-    expect(await venusloop.methods.owner().call()).eq(fakeOwner.address);
+    expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.eq(1000);
   });
+
   //
   // it("exit position one by one manually", async () => {
   //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });

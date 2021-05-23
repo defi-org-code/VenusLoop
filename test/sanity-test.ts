@@ -24,7 +24,7 @@ describe("VenusLoop Sanity Tests", () => {
     expect(await venusloop.methods.getBalanceXVS().call()).bignumber.zero;
     expect(await venusloop.methods.getClaimableXVS().call()).bignumber.zero;
   });
-  //
+
   it("access control", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
