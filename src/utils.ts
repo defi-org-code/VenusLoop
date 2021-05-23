@@ -39,3 +39,7 @@ export function fmt18(ether: BN | number | string) {
 export function fmt6(ether: BN | number | string) {
   return web3().utils.fromWei(bn(ether), "lovelace");
 }
+
+export function configFile() {
+  return require("../.config.json");
+}

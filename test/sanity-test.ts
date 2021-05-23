@@ -22,9 +22,9 @@ describe("VenusLoop Sanity Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
     expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.zero;
     expect(await venusloop.methods.getBalanceXVS().call()).bignumber.zero;
-    expect(await venusloop.methods.getBalanceClaimableXVS().call()).bignumber.zero;
+    expect(await venusloop.methods.getClaimableXVS().call()).bignumber.zero;
   });
-  //
+
   it("access control", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
@@ -37,8 +37,8 @@ describe("VenusLoop Sanity Tests", () => {
     await expectRevert(() => venusloop.methods.emergencyFunctionCall("", "").send());
     await expectRevert(() => venusloop.methods.emergencyFunctionDelegateCall("", "").send());
 
-    await expectRevert(() => venusloop.methods.enterPosition(1).send());
-    await expectRevert(() => venusloop.methods.exitPosition(20).send());
+    await expectRevert(() => venusloop.methods.enterPosition(1, 100_000).send());
+    await expectRevert(() => venusloop.methods.exitPosition(20, 100_000).send());
 
     await expectRevert(() => venusloop.methods.withdrawAllUSDCToOwner().send());
   });

@@ -2,14 +2,13 @@
 
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./IVenusInterfaces.sol";
 
-contract VenusLoop is Ownable {
+contract VenusLoop {
     using SafeERC20 for IERC20;
 
     // ---- fields ----
@@ -17,6 +16,8 @@ contract VenusLoop is Ownable {
     address public constant VUSDC = address(0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8);
     address public constant UNITROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant XVS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
+    uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
+    address public immutable owner;
 
     // ---- events ----
     event LogDeposit(uint256 amount);
@@ -24,33 +25,53 @@ contract VenusLoop is Ownable {
     event LogBorrow(uint256 amount);
     event LogRepay(uint256 amount);
 
-    // ---- Constructor ----
-
-    constructor(address owner) {
-        transferOwnership(owner);
+    // ---- constructor ----
+    constructor(address _owner) {
+        owner = _owner;
         // TODO
-        //                IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
+        // IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
+    }
+
+    // ---- modifiers ----
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "onlyOwner");
+        _;
     }
 
     // ---- views ----
 
+    /**
+     * Underlying balance
+     */
     function getBalanceUSDC() public view returns (uint256) {
         return IERC20(USDC).balanceOf(address(this));
     }
 
+    /**
+     * Supply balance
+     */
     function getBalanceVUSDC() public view returns (uint256) {
         return IERC20(VUSDC).balanceOf(address(this));
     }
 
+    /**
+     * Claimed reward balance
+     */
     function getBalanceXVS() public view returns (uint256) {
         return IERC20(XVS).balanceOf(address(this));
     }
 
-    function getBalanceClaimableXVS() public view returns (uint256) {
+    /**
+     * Unclaimed reward balance
+     */
+    function getClaimableXVS() public view returns (uint256) {
         return IComptroller(UNITROLLER).venusAccrued(address(this));
     }
 
-    /* This cannot be a view function as it updates state. Use the custom ABI hack to viewit on bscscan */
+    /**
+     * This cannot be a view function as it updates state. Use the custom ABI hack to view it on bscscan
+     */
     function getBorrowBalanceCurrent() public returns (uint256) {
         return IVToken(VUSDC).borrowBalanceCurrent(address(this));
     }
@@ -71,11 +92,11 @@ contract VenusLoop is Ownable {
 
     function claimRewardsToOwner() external {
         IComptroller(UNITROLLER).claimVenus(address(this));
-        IERC20(XVS).transfer(owner(), getBalanceXVS());
+        IERC20(XVS).safeTransfer(owner, getBalanceXVS());
     }
 
     // ---- main ----
-    function enterPosition(uint256 iterations) external onlyOwner {
+    function enterPosition(uint256 iterations, uint256 ratiopcm) external onlyOwner {
         // uint256 balanceUSDC = getBalanceUSDC();
         // require(balanceUSDC > 0, "insufficient funds");
         // for (uint256 i = 0; i < iterations; i++) {
@@ -93,7 +114,7 @@ contract VenusLoop is Ownable {
     /**
      * maxIterations - zero based max num of loops, can be greater than needed. Supports partial exits.
      */
-    function exitPosition(uint256 maxIterations) external onlyOwner {
+    function exitPosition(uint256 maxIterations, uint256 ratiopcm) external onlyOwner returns (uint256 endingBalance) {
         //        for (uint256 index = 0; getBalanceDebtToken() > 0 && index < maxIterations; index++) {
         //            (uint256 totalCollateralETH, uint256 totalDebtETH, , , uint256 ltv, ) = getPositionData();
         //
@@ -107,6 +128,7 @@ contract VenusLoop is Ownable {
         //        if (getBalanceDebtToken() == 0) {
         //            _withdraw(type(uint256).max);
         //        }
+        return getBalanceUSDC();
     }
 
     function withdrawAllUSDCToOwner() external onlyOwner {
@@ -121,45 +143,49 @@ contract VenusLoop is Ownable {
         IComptroller(UNITROLLER).enterMarkets(markets);
     }
 
-    // TODO: check amount in which token (USDC? in all)
+    // TODO: check amount in which token (USDC?)
     function _deposit(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
         emit LogDeposit(amount);
     }
 
+    // TODO: check amount in which token (USDC?)
     function _withdraw(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "withdraw failed");
         emit LogWithdraw(amount);
     }
 
+    // TODO: check amount in which token (USDC?)
     function _borrow(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).borrow(amount) == 0, "borrow failed");
         emit LogBorrow(amount);
     }
 
+    // TODO: check amount in which token (USDC?)
     function _repay(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).repayBorrow(amount) == 0, "repay failed");
         emit LogRepay(amount);
     }
 
-    function _depositAndBorrow(uint256 amount) public onlyOwner returns (uint256) {
+    function _depositAndBorrow(uint256 amount, uint256 ratiopcm) public onlyOwner returns (uint256 borrowedAmount) {
         _deposit(amount);
         //(, uint256 liquidity, ) = getAccountLiquidity();
-        uint256 balance = getBalanceVUSDC();
-
-        uint256 borrowRate = IVToken(VUSDC).borrowRatePerBlock();
-
-        uint256 borrowAmount = balance * borrowRate;
-
-        _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
-        return borrowAmount;
+        //        uint256 balance = getBalanceVUSDC();
+        //
+        //        uint256 borrowRate = IVToken(VUSDC).borrowRatePerBlock();
+        //
+        //        uint256 borrowAmount = balance * borrowRate;
+        //
+        //        _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
+        //        return borrowAmount;
+        return 0;
     }
 
     // ---- emergency ----
 
     function withdrawToOwner(address asset) public onlyOwner {
         uint256 balance = IERC20(asset).balanceOf(address(this));
-        IERC20(asset).safeTransfer(owner(), balance);
+        IERC20(asset).safeTransfer(owner, balance);
     }
 
     function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
