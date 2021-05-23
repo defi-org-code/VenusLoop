@@ -1,24 +1,22 @@
 import { expect } from "chai";
-import { newToken, USDC, XVS } from "../src/token";
+import { USDC } from "../src/token";
 import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
-import { contract } from "../src/extensions";
-import { Wallet } from "../src/wallet";
-import { IVToken } from "../typechain-hardhat/IVToken";
 
 describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {
     await initOwnerAndUSDC();
   });
 
-  it("owner able to call step by step", async () => {
+  it.skip("owner able to call step by step", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-    //expect(await USDC().methods.balanceOf(venusloop.options.address)).eq(POSITION);
+    expect(await USDC().methods.balanceOf(venusloop.options.address)).eq(POSITION);
 
-    // //await venusloop.methods._deposit(100).send({ from: owner });
-    // await venusloop.methods._borrow(50).send({ from: owner });
-    // await venusloop.methods._repay(50).send({ from: owner });
-    // await venusloop.methods._withdraw(100).send({ from: owner });
-    //expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.eq(POSITION);
+    await venusloop.methods._enterMarkets().send({ from: owner });
+    await venusloop.methods._deposit(100).send({ from: owner });
+    await venusloop.methods._borrow(50).send({ from: owner });
+    await venusloop.methods._repay(50).send({ from: owner });
+    await venusloop.methods._withdraw(100).send({ from: owner });
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.eq(POSITION);
   });
 
   it("withdrawAllUSDCToOwner", async () => {
@@ -42,15 +40,11 @@ describe("VenusLoop Emergency Tests", () => {
     expect(ownerBalance).bignumber.eq(POSITION);
   });
 
-  it("emergency function delegate call", async () => {
-    const vusdc = contract<IVToken>(
-      require("../artifacts/contracts/IVenusInterfaces.sol/IVToken.json").abi,
-      "0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8"
-    );
-    const encoded = vusdc.methods.mint(1000).encodeABI();
-    await venusloop.methods.emergencyFunctionDelegateCall(vusdc.options.address, encoded).send({ from: owner });
-
-    expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.eq(1000);
+  it.skip("emergency function delegate call", async () => {
+    // upload a temp contract to use as lib (extension)
+    await USDC().methods.transfer(venusloop.options.address, 1000).send({ from: owner });
+    const encoded = USDC().methods.transfer(owner, 1000).encodeABI();
+    await venusloop.methods.emergencyFunctionDelegateCall(USDC().options.address, encoded).send({ from: owner });
   });
 
   //
