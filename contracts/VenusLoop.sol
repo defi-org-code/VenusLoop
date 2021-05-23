@@ -75,19 +75,18 @@ contract VenusLoop is Ownable {
     }
 
     // ---- main ----
-
     function enterPosition(uint256 iterations) external onlyOwner {
-        uint256 balanceUSDC = getBalanceUSDC();
-        require(balanceUSDC > 0, "insufficient funds");
-
-        for (uint256 i = 0; i < iterations; i++) {
-            _deposit(balanceUSDC);
-            //(, , , , uint256 ltv, ) = getPositionData();
-            //uint256 borrowAmount = (balanceUSDC * ltv) / BASE_PERCENT;
-            // _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
-            // balanceUSDC = getBalanceUSDC();
-        }
-
+        // uint256 balanceUSDC = getBalanceUSDC();
+        // require(balanceUSDC > 0, "insufficient funds");
+        // for (uint256 i = 0; i < iterations; i++) {
+        //_deposit(balanceUSDC);
+        //(, uint256 liquidity, ) = getAccountLiquidity();
+        //uint256 vusdc = getBalanceVUSDC();
+        //uint256 borrowAmount = (vusdc * ltv); // BASE_PERCENT;
+        //uint256 borrowAmount = (vusdc) / BASE_PERCENT;
+        //_borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
+        // balanceUSDC = getBalanceUSDC();
+        //}
         //_deposit(balanceUSDC);
     }
 
@@ -141,6 +140,19 @@ contract VenusLoop is Ownable {
     function _repay(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).repayBorrow(amount) == 0, "repay failed");
         emit LogRepay(amount);
+    }
+
+    function _depositAndBorrow(uint256 amount) public onlyOwner returns (uint256) {
+        _deposit(amount);
+        //(, uint256 liquidity, ) = getAccountLiquidity();
+        uint256 balance = getBalanceVUSDC();
+
+        uint256 borrowRate = IVToken(VUSDC).borrowRatePerBlock();
+
+        uint256 borrowAmount = balance * borrowRate;
+
+        _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
+        return borrowAmount;
     }
 
     // ---- emergency ----

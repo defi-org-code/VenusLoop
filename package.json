@@ -8,7 +8,8 @@
   "author": "Orbs",
   "license": "MIT",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.1.0"
+    "@openzeppelin/contracts": "^4.1.0",
+    "solc": "^0.7.3"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-etherscan": "^2.1.2",
@@ -28,6 +29,7 @@
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-tracer": "^1.0.0-alpha.6",
     "lodash": "^4.17.21",
+    "mocha": "^7.2.0",
     "prettier": "^2.3.0",
     "prettier-plugin-solidity": "^1.0.0-beta.10",
     "prompts": "^2.4.1",
