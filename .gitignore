@@ -253,6 +253,9 @@ dist/
 tmp/
 temp/
 
+#mocarc
+.mocharc.json
+
 ### Solidity ###
 # Logs
 
