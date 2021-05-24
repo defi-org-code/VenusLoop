@@ -20,7 +20,7 @@ describe("VenusLoop Sanity Tests", () => {
     await venusloop.methods.claimRewardsToOwner().send();
     expect(await XVS().methods.balanceOf(owner).call()).bignumber.zero;
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-    expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.zero;
+    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.zero;
     expect(await venusloop.methods.getBalanceXVS().call()).bignumber.zero;
     expect(await venusloop.methods.getClaimableXVS().call()).bignumber.zero;
   });

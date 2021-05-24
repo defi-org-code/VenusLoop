@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { USDC } from "../src/token";
-import { bn6, fmt6, zero } from "../src/utils";
 import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 
 describe("VenusLoop Emergency Tests", () => {
@@ -8,7 +7,7 @@ describe("VenusLoop Emergency Tests", () => {
     await initOwnerAndUSDC();
   });
 
-  it.skip("owner able to call step by step", async () => {
+  it("owner able to call step by step", async () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
     expect(await USDC().methods.balanceOf(venusloop.options.address)).eq(POSITION);
 

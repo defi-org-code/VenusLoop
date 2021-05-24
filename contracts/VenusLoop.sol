@@ -51,8 +51,29 @@ contract VenusLoop {
     /**
      * Total underlying (USDC) supplied balance
      */
-    function getTotalSupplied() public view returns (uint256) {
+    function getTotalSupplied() external view returns (uint256) {
         return (IVToken(VUSDC).exchangeRateStored() * IERC20(VUSDC).balanceOf(address(this))) / 1e18;
+    }
+
+    /**
+     * Total underlying (USDC) supplied balance - with state update
+     */
+    function getTotalSuppliedAccrued() public returns (uint256) {
+        return IVToken(VUSDC).balanceOfUnderlying(address(this));
+    }
+
+    /**
+     * Total borrowed balance (USDC) debt
+     */
+    function getTotalBorrowed() external view returns (uint256) {
+        return IVToken(VUSDC).borrowBalanceStored(address(this));
+    }
+
+    /**
+     * Total borrowed balance (USDC) debt - with state update
+     */
+    function getTotalBorrowedAccrued() external returns (uint256) {
+        return IVToken(VUSDC).borrowBalanceCurrent(address(this));
     }
 
     /**
@@ -65,15 +86,8 @@ contract VenusLoop {
     /**
      * Unclaimed reward balance
      */
-    function getClaimableXVS() public view returns (uint256) {
+    function getClaimableXVS() external view returns (uint256) {
         return IComptroller(UNITROLLER).venusAccrued(address(this));
-    }
-
-    /**
-     * This cannot be a view function as it updates state. Use the custom ABI hack to view it on bscscan
-     */
-    function getBorrowBalanceCurrent() public returns (uint256) {
-        return IVToken(VUSDC).borrowBalanceCurrent(address(this));
     }
 
     function getAccountLiquidity()
@@ -96,17 +110,18 @@ contract VenusLoop {
     }
 
     // ---- main ----
-    function enterPosition(uint8 iterations, uint256 ratio) external onlyOwner {
-        for (uint8 i = 0; i < iterations; i++) {
-            _depositAndBorrow(getBalanceUSDC(), ratio);
-        }
+    function enterPosition(uint256 iterations, uint256 ratio) external onlyOwner {
         _deposit(getBalanceUSDC());
+        for (uint256 i = 0; i < iterations; i++) {
+            _borrowAndDeposit(ratio);
+        }
     }
 
     /**
      * maxIterations - zero based max num of loops, can be greater than needed. Supports partial exits.
      */
-    function exitPosition(uint256 maxIterations, uint256 ratiopcm) external onlyOwner returns (uint256 endingBalance) {
+    function exitPosition(uint256 maxIterations, uint256 ratio) external onlyOwner returns (uint256 endingBalance) {
+        for (uint256 i = 0; i < maxIterations; i++) {}
         //        for (uint256 index = 0; getBalanceDebtToken() > 0 && index < maxIterations; index++) {
         //            (uint256 totalCollateralETH, uint256 totalDebtETH, , , uint256 ltv, ) = getPositionData();
         //
@@ -138,7 +153,10 @@ contract VenusLoop {
         emit LogDeposit(amount);
     }
 
-    // TODO check amount in which token (USDC?)
+    /**
+     * withdraw from supply
+     * amount: USDC
+     */
     function _withdraw(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "withdraw failed");
         emit LogWithdraw(amount);
@@ -152,26 +170,42 @@ contract VenusLoop {
         emit LogBorrow(amount);
     }
 
-    // TODO check amount in which token (USDC?)
+    /**
+     * pay back debt
+     * amount: USDC
+     */
     function _repay(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).repayBorrow(amount) == 0, "repay failed");
         emit LogRepay(amount);
     }
 
     /**
-     * amount: USDC
-     * ratio: 1/100,000 (recommended 97,500)
+     * ratio: 1/100,000
      */
-    function _depositAndBorrow(uint256 amount, uint256 ratio) public onlyOwner {
-        require(amount > 0, "insufficient funds");
-        _deposit(amount);
-
+    function _borrowAndDeposit(uint256 ratio) public onlyOwner {
         (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
         require(err == 0 && shortfall == 0, "_depositAndBorrow failed");
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
         _borrow(borrowAmount);
+
+        _deposit(getBalanceUSDC());
     }
+
+    //    /**
+    //     * amount: USDC
+    //     * ratio: 1/100,000
+    //     */
+    //    function _withdrawAndRepay(uint256 amount, uint256 ratio) public onlyOwner {
+    //        require(amount > 0, "insufficient funds");
+    //        _repay(amount);
+    //
+    //        (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
+    //        require(err == 0 && shortfall == 0, "_repayAndWithdraw failed");
+    //
+    //        uint256 withdrawAmount = (liquidity * ratio) / PERCENT;
+    //        _withdraw(withdrawAmount);
+    //    }
 
     function _enterMarkets() private {
         address[] memory markets = new address[](1);
