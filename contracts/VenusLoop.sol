@@ -23,6 +23,7 @@ contract VenusLoop {
     event LogSupply(uint256 amount);
     event LogBorrow(uint256 amount);
     event LogRedeem(uint256 amount);
+    event LogRedeemVTokens(uint256 amount);
     event LogRepay(uint256 amount);
 
     // ---- constructor ----
@@ -57,17 +58,17 @@ contract VenusLoop {
     }
 
     /**
-     * Total underlying (USDC) supplied balance - with state update
-     */
-    function getTotalSuppliedAccrued() public returns (uint256) {
-        return IVToken(VUSDC).balanceOfUnderlying(address(this));
-    }
-
-    /**
      * Total borrowed balance (USDC) debt
      */
     function getTotalBorrowed() external view returns (uint256) {
         return IVToken(VUSDC).borrowBalanceStored(address(this));
+    }
+
+    /**
+     * Total underlying (USDC) supplied balance - with state update
+     */
+    function getTotalSuppliedAccrued() public returns (uint256) {
+        return IVToken(VUSDC).balanceOfUnderlying(address(this));
     }
 
     /**
@@ -131,9 +132,10 @@ contract VenusLoop {
         for (uint256 i = 0; getTotalBorrowedAccrued() > 0 && i < maxIterations; i++) {
             console.log("exit", i);
             _redeemAndRepay(ratio);
+            console.log("exit ok");
         }
         if (getTotalBorrowedAccrued() == 0) {
-            _redeem(getTotalSuppliedAccrued());
+            _redeemVTokens(IERC20(VUSDC).balanceOf(address(this)));
         }
         return getBalanceUSDC();
     }
@@ -158,8 +160,17 @@ contract VenusLoop {
      * amount: USDC
      */
     function _redeem(uint256 amount) public onlyOwner {
-        require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "withdraw failed");
+        require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "redeem failed");
         emit LogRedeem(amount);
+    }
+
+    /**
+     * withdraw from supply
+     * amount: VUSDC
+     */
+    function _redeemVTokens(uint256 amountVUSDC) public onlyOwner {
+        require(IVToken(VUSDC).redeem(amountVUSDC) == 0, "redeemVTokens failed");
+        emit LogRedeemVTokens(amountVUSDC);
     }
 
     /**
@@ -193,15 +204,15 @@ contract VenusLoop {
     }
 
     /**
-     * ratio: 1/100,000 (recommended 121.118% == 121,118)
+     * ratio: 1/100,000 (recommended 97.5% == 97,500)
      */
     function _redeemAndRepay(uint256 ratio) public onlyOwner {
         (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
         require(err == 0 && shortfall == 0, "_redeemAndRepay failed");
 
-        uint256 redeemAmount = (liquidity * ratio) / PERCENT;
-        console.log("redeemAmount", redeemAmount);
-        console.log("liquidity", liquidity);
+        (, uint256 collateralFactor) = IComptroller(UNITROLLER).markets(VUSDC);
+        uint256 canWithdraw = ((liquidity * 1e18) / collateralFactor);
+        uint256 redeemAmount = (canWithdraw * ratio) / PERCENT;
         _redeem(redeemAmount);
 
         uint256 usdc = getBalanceUSDC();
@@ -209,7 +220,7 @@ contract VenusLoop {
         if (usdc < borrowed) {
             _repay(usdc);
         } else {
-            _repay(borrowed);
+            _repay(type(uint256).max);
         }
     }
 

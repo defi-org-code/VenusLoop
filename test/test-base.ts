@@ -65,9 +65,7 @@ export async function expectRevert(fn: () => any) {
 
 export async function expectOutOfPosition() {
   expect(await venusloop.methods.getTotalSupplied().call()).bignumber.zero;
-
   expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.zero;
-
   const al = await venusloop.methods.getAccountLiquidity().call();
   expect(al.err).bignumber.zero;
   expect(al.liquidity).bignumber.zero;

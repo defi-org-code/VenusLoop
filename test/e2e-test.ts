@@ -112,9 +112,9 @@ describe("VenusLoop E2E Tests", () => {
       bn6("5000")
     );
 
-    await venusloop.methods.exitPosition(100, 100_000).send({ from: owner });
+    await venusloop.methods.exitPosition(100, 97_500).send({ from: owner });
     await expectOutOfPosition();
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo("1,000,000", bn6("1000"));
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
   });
 });
 

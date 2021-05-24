@@ -3,6 +3,8 @@
 pragma solidity 0.8.4;
 
 interface IComptroller {
+    function markets(address vToken) external view returns (bool, uint256);
+
     function enterMarkets(address[] calldata vTokens) external returns (uint256[] memory);
 
     function exitMarket(address vToken) external returns (uint256);
@@ -150,7 +152,7 @@ interface IVToken {
 
     function balanceOf(address owner) external view returns (uint256);
 
-    function balanceOfUnderlying(address owner) external view returns (uint256);
+    function balanceOfUnderlying(address owner) external returns (uint256);
 
     function getAccountSnapshot(address account)
         external
