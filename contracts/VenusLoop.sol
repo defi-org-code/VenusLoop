@@ -5,7 +5,6 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "hardhat/console.sol";
 import "./IVenusInterfaces.sol";
 
 contract VenusLoop {
@@ -97,19 +96,11 @@ contract VenusLoop {
     }
 
     // ---- main ----
-    function enterPosition(uint256 iterations, uint256 ratiopcm) external onlyOwner {
-        // uint256 balanceUSDC = getBalanceUSDC();
-        // require(balanceUSDC > 0, "insufficient funds");
-        // for (uint256 i = 0; i < iterations; i++) {
-        //_deposit(balanceUSDC);
-        //(, uint256 liquidity, ) = getAccountLiquidity();
-        //uint256 vusdc = getBalanceVUSDC();
-        //uint256 borrowAmount = (vusdc * ltv); // BASE_PERCENT;
-        //uint256 borrowAmount = (vusdc) / BASE_PERCENT;
-        //_borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
-        // balanceUSDC = getBalanceUSDC();
-        //}
-        //_deposit(balanceUSDC);
+    function enterPosition(uint8 iterations, uint256 ratio) external onlyOwner {
+        for (uint8 i = 0; i < iterations; i++) {
+            _depositAndBorrow(getBalanceUSDC(), ratio);
+        }
+        _deposit(balanceUSDC);
     }
 
     /**
@@ -138,40 +129,49 @@ contract VenusLoop {
 
     // ---- internals, public onlyOwner in case of emergency ----
 
-    // TODO: check amount in which token (USDC?)
+    /**
+     * amount: USDC
+     * generates interest
+     */
     function _deposit(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
         emit LogDeposit(amount);
     }
 
-    // TODO: check amount in which token (USDC?)
+    // TODO check amount in which token (USDC?)
     function _withdraw(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "withdraw failed");
         emit LogWithdraw(amount);
     }
 
-    // TODO: check amount in which token (USDC?)
+    /**
+     * amount: USDC
+     */
     function _borrow(uint256 amount) public onlyOwner {
-        uint256 res = IVToken(VUSDC).borrow(amount);
-        console.log("_borrow err code = ", res);
-        require(res == 0, "borrow failed");
+        require(IVToken(VUSDC).borrow(amount) == 0, "borrow failed");
         emit LogBorrow(amount);
     }
 
-    // TODO: check amount in which token (USDC?)
+    // TODO check amount in which token (USDC?)
     function _repay(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).repayBorrow(amount) == 0, "repay failed");
         emit LogRepay(amount);
     }
 
-    function _depositAndBorrow(uint256 amount, uint256 ratiopcm) public onlyOwner {
-        console.log("getBalanceUSDC = ", getBalanceUSDC());
+    /**
+     * amount: USDC
+     * ratio: 1/100,000 (recommended 97,500)
+     */
+    function _depositAndBorrow(uint256 amount, uint256 ratio) public onlyOwner {
+        require(getBalanceUSDC() > 0, "insufficient funds");
+
         _deposit(amount);
 
-        (, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
-        console.log("liquidity after = ", liquidity);
-        console.log("shortfall = ", shortfall);
-        _borrow(liquidity - 560e6);
+        (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
+        require(err == 0 && shortfall == 0, "_depositAndBorrow failed");
+
+        uint256 borrowAmount = (liquidity * ratio) / PERCENT;
+        _borrow(borrowAmount);
     }
 
     function _enterMarkets() private {
