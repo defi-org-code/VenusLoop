@@ -5,7 +5,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-
+import "hardhat/console.sol";
 import "./IVenusInterfaces.sol";
 
 contract VenusLoop {
@@ -28,8 +28,9 @@ contract VenusLoop {
     // ---- constructor ----
     constructor(address _owner) {
         owner = _owner;
-        // TODO
-        // IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
+
+        IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
+        _enterMarkets();
     }
 
     // ---- modifiers ----
@@ -137,12 +138,6 @@ contract VenusLoop {
 
     // ---- internals, public onlyOwner in case of emergency ----
 
-    function _enterMarkets() public onlyOwner {
-        address[] memory markets = new address[](1);
-        markets[0] = VUSDC;
-        IComptroller(UNITROLLER).enterMarkets(markets);
-    }
-
     // TODO: check amount in which token (USDC?)
     function _deposit(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
@@ -157,7 +152,9 @@ contract VenusLoop {
 
     // TODO: check amount in which token (USDC?)
     function _borrow(uint256 amount) public onlyOwner {
-        require(IVToken(VUSDC).borrow(amount) == 0, "borrow failed");
+        uint256 res = IVToken(VUSDC).borrow(amount);
+        console.log("_borrow err code = ", res);
+        require(res == 0, "borrow failed");
         emit LogBorrow(amount);
     }
 
@@ -167,18 +164,20 @@ contract VenusLoop {
         emit LogRepay(amount);
     }
 
-    function _depositAndBorrow(uint256 amount, uint256 ratiopcm) public onlyOwner returns (uint256 borrowedAmount) {
+    function _depositAndBorrow(uint256 amount, uint256 ratiopcm) public onlyOwner {
+        console.log("getBalanceUSDC = ", getBalanceUSDC());
         _deposit(amount);
-        //(, uint256 liquidity, ) = getAccountLiquidity();
-        //        uint256 balance = getBalanceVUSDC();
-        //
-        //        uint256 borrowRate = IVToken(VUSDC).borrowRatePerBlock();
-        //
-        //        uint256 borrowAmount = balance * borrowRate;
-        //
-        //        _borrow(borrowAmount - 1e6); // $1 buffer for sanity (rounding error)
-        //        return borrowAmount;
-        return 0;
+
+        (, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
+        console.log("liquidity after = ", liquidity);
+        console.log("shortfall = ", shortfall);
+        _borrow(liquidity - 560e6);
+    }
+
+    function _enterMarkets() private {
+        address[] memory markets = new address[](1);
+        markets[0] = VUSDC;
+        IComptroller(UNITROLLER).enterMarkets(markets);
     }
 
     // ---- emergency ----

@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { USDC } from "../src/token";
+import { bn6 } from "../src/utils";
 import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 
 describe("VenusLoop Emergency Tests", () => {
@@ -11,7 +12,6 @@ describe("VenusLoop Emergency Tests", () => {
     await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
     expect(await USDC().methods.balanceOf(venusloop.options.address)).eq(POSITION);
 
-    await venusloop.methods._enterMarkets().send({ from: owner });
     await venusloop.methods._deposit(100).send({ from: owner });
     await venusloop.methods._borrow(50).send({ from: owner });
     await venusloop.methods._repay(50).send({ from: owner });
@@ -45,6 +45,14 @@ describe("VenusLoop Emergency Tests", () => {
     await USDC().methods.transfer(venusloop.options.address, 1000).send({ from: owner });
     const encoded = USDC().methods.transfer(owner, 1000).encodeABI();
     await venusloop.methods.emergencyFunctionDelegateCall(USDC().options.address, encoded).send({ from: owner });
+  });
+
+  it.only("deposit and borrow", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+
+    await venusloop.methods._depositAndBorrow(bn6("1,000,000"), 100_000).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.eq(bn6("800,000"));
   });
 
   //
