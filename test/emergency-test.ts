@@ -14,7 +14,7 @@ describe("VenusLoop Emergency Tests", () => {
     await venusloop.methods._deposit(100).send({ from: owner });
     await venusloop.methods._borrow(50).send({ from: owner });
     await venusloop.methods._repay(50).send({ from: owner });
-    await venusloop.methods._withdraw(100).send({ from: owner });
+    await venusloop.methods._redeem(100).send({ from: owner });
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.eq(POSITION);
   });
 

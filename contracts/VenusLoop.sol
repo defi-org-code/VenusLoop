@@ -20,8 +20,8 @@ contract VenusLoop {
 
     // ---- events ----
     event LogDeposit(uint256 amount);
-    event LogWithdraw(uint256 amount);
     event LogBorrow(uint256 amount);
+    event LogRedeem(uint256 amount);
     event LogRepay(uint256 amount);
 
     // ---- constructor ----
@@ -157,9 +157,9 @@ contract VenusLoop {
      * withdraw from supply
      * amount: USDC
      */
-    function _withdraw(uint256 amount) public onlyOwner {
+    function _redeem(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "withdraw failed");
-        emit LogWithdraw(amount);
+        emit LogRedeem(amount);
     }
 
     /**
@@ -180,11 +180,11 @@ contract VenusLoop {
     }
 
     /**
-     * ratio: 1/100,000
+     * ratio: 1/100,000 (recommended 97.5% == 97,500)
      */
     function _borrowAndDeposit(uint256 ratio) public onlyOwner {
         (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
-        require(err == 0 && shortfall == 0, "_depositAndBorrow failed");
+        require(err == 0 && shortfall == 0, "_borrowAndDeposit failed");
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
         _borrow(borrowAmount);
@@ -192,20 +192,18 @@ contract VenusLoop {
         _deposit(getBalanceUSDC());
     }
 
-    //    /**
-    //     * amount: USDC
-    //     * ratio: 1/100,000
-    //     */
-    //    function _withdrawAndRepay(uint256 amount, uint256 ratio) public onlyOwner {
-    //        require(amount > 0, "insufficient funds");
-    //        _repay(amount);
-    //
-    //        (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
-    //        require(err == 0 && shortfall == 0, "_repayAndWithdraw failed");
-    //
-    //        uint256 withdrawAmount = (liquidity * ratio) / PERCENT;
-    //        _withdraw(withdrawAmount);
-    //    }
+    /**
+     * ratio: 1/100,000 (recommended 121.118% == 121,118)
+     */
+    function _redeemAndRepay(uint256 ratio) public onlyOwner {
+        (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
+        require(err == 0 && shortfall == 0, "_redeemAndRepay failed");
+
+        uint256 redeemAmount = (liquidity * ratio) / PERCENT;
+        _redeem(redeemAmount);
+
+        _repay(getBalanceUSDC());
+    }
 
     function _enterMarkets() private {
         address[] memory markets = new address[](1);

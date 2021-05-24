@@ -81,7 +81,7 @@ describe("VenusLoop E2E Tests", () => {
   //   expect(endHF).bignumber.lt(startHF).gt(ether); // must be > 1 to not be liquidated
   // });
 
-  it.only("manual borrowAndDeposit", async () => {
+  it("manual borrow and deposit", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
 
     await venusloop.methods._deposit(bn6("1,000,000")).send({ from: owner });
@@ -96,11 +96,20 @@ describe("VenusLoop E2E Tests", () => {
     );
   });
 
-  it("manual repay and redeem", async () => {
+  it.only("manual redeem and repay", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-    // await venusloop.methods._depositAndBorrow(bn6("1,000,000"), 97_500).send({ from: owner });
+    await venusloop.methods._deposit(bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods._borrowAndDeposit(97_500).send({ from: owner });
 
-    // await venusloop.methods._repayAndWithdraw()
+    await venusloop.methods._redeemAndRepay(121_118).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
+    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(zero, bn6("1000"));
+    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
+    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
+      bn6("800,000"),
+      bn6("1000")
+    );
   });
 
   it("enter position", async () => {

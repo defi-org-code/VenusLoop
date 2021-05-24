@@ -30,9 +30,9 @@ describe("VenusLoop Sanity Tests", () => {
 
     // check revert with default deployer (who is not the default owner )
     await expectRevert(() => venusloop.methods._deposit(100).send());
-    await expectRevert(() => venusloop.methods._withdraw(100).send());
     await expectRevert(() => venusloop.methods._borrow(50).send());
     await expectRevert(() => venusloop.methods._repay(50).send());
+    await expectRevert(() => venusloop.methods._redeem(100).send());
 
     await expectRevert(() => venusloop.methods.emergencyFunctionCall("", "").send());
     await expectRevert(() => venusloop.methods.emergencyFunctionDelegateCall("", "").send());
