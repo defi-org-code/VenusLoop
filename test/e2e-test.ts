@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
+import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 import { bn6, fmt6, zero } from "../src/utils";
 import { USDC } from "../src/token";
 import { expect } from "chai";
@@ -9,18 +9,6 @@ describe("VenusLoop E2E Tests", () => {
     await initOwnerAndUSDC();
   });
 
-  // it("happy path", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //
-  //   await venusloop.methods.enterPosition(14).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods.exitPosition(14).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.greaterThan(POSITION);
-  //
-  //   await expectOutOfPosition();
-  // });
-  //
   // it("Show me the money", async () => {
   //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
   //
@@ -84,8 +72,8 @@ describe("VenusLoop E2E Tests", () => {
   it("manual borrow and deposit", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
 
-    await venusloop.methods._deposit(bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods._borrowAndDeposit(97_500).send({ from: owner });
+    await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods._borrowAndSupply(97_500).send({ from: owner });
 
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
     expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("780,000"), bn6("1000"));
@@ -96,10 +84,10 @@ describe("VenusLoop E2E Tests", () => {
     );
   });
 
-  it.only("manual redeem and repay", async () => {
+  it("manual redeem and repay", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods._deposit(bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods._borrowAndDeposit(97_500).send({ from: owner });
+    await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods._borrowAndSupply(97_500).send({ from: owner });
 
     await venusloop.methods._redeemAndRepay(121_118).send({ from: owner });
 
@@ -112,7 +100,7 @@ describe("VenusLoop E2E Tests", () => {
     );
   });
 
-  it("enter position", async () => {
+  it.only("happy path", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
     await venusloop.methods.enterPosition(11, 97_500).send({ from: owner });
 
@@ -124,7 +112,9 @@ describe("VenusLoop E2E Tests", () => {
       bn6("5000")
     );
 
-    // await venusloop.methods.exitPosition(100, 97_500).send({ from: owner });
+    await venusloop.methods.exitPosition(100, 100_000).send({ from: owner });
+    await expectOutOfPosition();
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo("1,000,000", bn6("1000"));
   });
 });
 

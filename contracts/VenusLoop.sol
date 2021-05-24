@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./IVenusInterfaces.sol";
+import "hardhat/console.sol";
 
 contract VenusLoop {
     using SafeERC20 for IERC20;
@@ -16,10 +17,10 @@ contract VenusLoop {
     address public constant UNITROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant XVS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
     uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
-    address public immutable owner;
+    address public immutable owner; // TODO add admin role
 
     // ---- events ----
-    event LogDeposit(uint256 amount);
+    event LogSupply(uint256 amount);
     event LogBorrow(uint256 amount);
     event LogRedeem(uint256 amount);
     event LogRepay(uint256 amount);
@@ -72,7 +73,7 @@ contract VenusLoop {
     /**
      * Total borrowed balance (USDC) debt - with state update
      */
-    function getTotalBorrowedAccrued() external returns (uint256) {
+    function getTotalBorrowedAccrued() public returns (uint256) {
         return IVToken(VUSDC).borrowBalanceCurrent(address(this));
     }
 
@@ -110,31 +111,30 @@ contract VenusLoop {
     }
 
     // ---- main ----
+    /**
+     * iterations: number of leverage loops
+     * ratio: percent of liquidity to borrow each iteration. 1/100,000 (recommended 97.5% == 97,500)
+     */
     function enterPosition(uint256 iterations, uint256 ratio) external onlyOwner {
-        _deposit(getBalanceUSDC());
+        _supply(getBalanceUSDC());
         for (uint256 i = 0; i < iterations; i++) {
-            _borrowAndDeposit(ratio);
+            _borrowAndSupply(ratio);
         }
     }
 
     /**
-     * maxIterations - zero based max num of loops, can be greater than needed. Supports partial exits.
+     * Supports partial exits
+     * maxIterations: max (upper bound) of exit deleverage loops
+     * ratio: percent of liquidity to redeem each iteration. 1/100,000 (recommended 121.118% == 121,118)
      */
     function exitPosition(uint256 maxIterations, uint256 ratio) external onlyOwner returns (uint256 endingBalance) {
-        for (uint256 i = 0; i < maxIterations; i++) {}
-        //        for (uint256 index = 0; getBalanceDebtToken() > 0 && index < maxIterations; index++) {
-        //            (uint256 totalCollateralETH, uint256 totalDebtETH, , , uint256 ltv, ) = getPositionData();
-        //
-        //            uint256 debtWithBufferETH = (totalDebtETH * BASE_PERCENT) / ltv;
-        //            uint256 debtSafeRatio = ((totalCollateralETH - debtWithBufferETH) * 1 ether) / totalCollateralETH;
-        //            uint256 amountToWithdraw = (getBalanceAUSDC() * debtSafeRatio) / 1 ether;
-        //
-        //            _withdraw(amountToWithdraw);
-        //            _repay(getBalanceUSDC());
-        //        }
-        //        if (getBalanceDebtToken() == 0) {
-        //            _withdraw(type(uint256).max);
-        //        }
+        for (uint256 i = 0; getTotalBorrowedAccrued() > 0 && i < maxIterations; i++) {
+            console.log("exit", i);
+            _redeemAndRepay(ratio);
+        }
+        if (getTotalBorrowedAccrued() == 0) {
+            _redeem(getTotalSuppliedAccrued());
+        }
         return getBalanceUSDC();
     }
 
@@ -148,9 +148,9 @@ contract VenusLoop {
      * amount: USDC
      * generates interest
      */
-    function _deposit(uint256 amount) public onlyOwner {
+    function _supply(uint256 amount) public onlyOwner {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
-        emit LogDeposit(amount);
+        emit LogSupply(amount);
     }
 
     /**
@@ -182,14 +182,14 @@ contract VenusLoop {
     /**
      * ratio: 1/100,000 (recommended 97.5% == 97,500)
      */
-    function _borrowAndDeposit(uint256 ratio) public onlyOwner {
+    function _borrowAndSupply(uint256 ratio) public onlyOwner {
         (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
-        require(err == 0 && shortfall == 0, "_borrowAndDeposit failed");
+        require(err == 0 && shortfall == 0, "_borrowAndSupply failed");
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
         _borrow(borrowAmount);
 
-        _deposit(getBalanceUSDC());
+        _supply(getBalanceUSDC());
     }
 
     /**
@@ -200,9 +200,17 @@ contract VenusLoop {
         require(err == 0 && shortfall == 0, "_redeemAndRepay failed");
 
         uint256 redeemAmount = (liquidity * ratio) / PERCENT;
+        console.log("redeemAmount", redeemAmount);
+        console.log("liquidity", liquidity);
         _redeem(redeemAmount);
 
-        _repay(getBalanceUSDC());
+        uint256 usdc = getBalanceUSDC();
+        uint256 borrowed = getTotalBorrowedAccrued();
+        if (usdc < borrowed) {
+            _repay(usdc);
+        } else {
+            _repay(borrowed);
+        }
     }
 
     function _enterMarkets() private {
