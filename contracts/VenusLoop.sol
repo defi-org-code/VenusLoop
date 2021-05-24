@@ -49,10 +49,10 @@ contract VenusLoop {
     }
 
     /**
-     * Supply balance
+     * Total underlying (USDC) supplied balance
      */
-    function getBalanceVUSDC() public view returns (uint256) {
-        return IERC20(VUSDC).balanceOf(address(this));
+    function getTotalSupplied() public view returns (uint256) {
+        return (IVToken(VUSDC).exchangeRateStored() * IERC20(VUSDC).balanceOf(address(this))) / 1e18;
     }
 
     /**
@@ -100,7 +100,7 @@ contract VenusLoop {
         for (uint8 i = 0; i < iterations; i++) {
             _depositAndBorrow(getBalanceUSDC(), ratio);
         }
-        _deposit(balanceUSDC);
+        _deposit(getBalanceUSDC());
     }
 
     /**
@@ -163,8 +163,7 @@ contract VenusLoop {
      * ratio: 1/100,000 (recommended 97,500)
      */
     function _depositAndBorrow(uint256 amount, uint256 ratio) public onlyOwner {
-        require(getBalanceUSDC() > 0, "insufficient funds");
-
+        require(amount > 0, "insufficient funds");
         _deposit(amount);
 
         (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();

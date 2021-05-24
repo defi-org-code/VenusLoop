@@ -1,8 +1,10 @@
 import BN from "bn.js";
-import { initOwnerAndUSDC, POSITION } from "./test-base";
-import { bn6, fmt6 } from "../src/utils";
+import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
+import { bn6, fmt6, zero } from "../src/utils";
+import { USDC } from "../src/token";
+import { expect } from "chai";
 
-describe.skip("AaveLoop E2E Tests", () => {
+describe("AaveLoop E2E Tests", () => {
   beforeEach(async () => {
     await initOwnerAndUSDC();
   });
@@ -78,6 +80,33 @@ describe.skip("AaveLoop E2E Tests", () => {
   //   console.log("health factor after 1 year:", fmt18(startHF), fmt18(endHF), "diff:", fmt18(endHF.sub(startHF)));
   //   expect(endHF).bignumber.lt(startHF).gt(ether); // must be > 1 to not be liquidated
   // });
+
+  it("manual deposit and borrow", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+
+    await venusloop.methods._depositAndBorrow(bn6("1,000,000"), 97_500).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("780,000"), bn6("1000")); // due to interest
+    expect(await venusloop.methods.getBorrowBalanceCurrent().call()).bignumber.closeTo(bn6("780,000"), bn6("1000"));
+    expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.closeTo(zero, bn6("100"));
+    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
+      bn6("20,000"),
+      bn6("1000")
+    );
+  });
+
+  it("enter position", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods.enterPosition(11, 97_500).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
+    expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.closeTo(bn6("4,632,000"), bn6("5000"));
+    expect(await venusloop.methods.getBorrowBalanceCurrent().call()).bignumber.closeTo(bn6("3,632,000"), bn6("5000"));
+    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
+      bn6("73,594"),
+      bn6("5000")
+    );
+  });
 });
 
 function printAPY(endBalanceUSDC: BN, claimedBalance: BN) {

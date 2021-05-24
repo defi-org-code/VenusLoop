@@ -47,22 +47,6 @@ describe("VenusLoop Emergency Tests", () => {
     await venusloop.methods.emergencyFunctionDelegateCall(USDC().options.address, encoded).send({ from: owner });
   });
 
-  it("deposit and borrow", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-
-    await venusloop.methods._depositAndBorrow(bn6("1,000,000"), 97_500).send({ from: owner });
-
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("780,000"), bn6("1000")); // due to interest
-    expect(await venusloop.methods.getBorrowBalanceCurrent().call()).bignumber.closeTo(bn6("780,000"), bn6("1000"));
-    expect(await venusloop.methods.getBalanceVUSDC().call()).bignumber.closeTo(zero, bn6("100"));
-    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
-      bn6("20,000"),
-      bn6("1000")
-    );
-  });
-
-  // TODO deposit and withdraw
-
   //
   // it("exit position one by one manually", async () => {
   //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
