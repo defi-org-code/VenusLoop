@@ -11,11 +11,8 @@ describe("VenusLoop Sanity Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
     await expectOutOfPosition();
     expect(await venusloop.methods.owner().call()).eq(owner);
-    const result = await venusloop.methods.getAccountLiquidity().call();
 
-    expect(result.err).bignumber.zero;
-    expect(result.liquidity).bignumber.zero;
-    expect(result.shortfall).bignumber.zero;
+    expect(await venusloop.methods.getAccountLiquidity().call()).bignumber.zero;
 
     await venusloop.methods.claimRewardsToOwner().send();
     expect(await XVS().methods.balanceOf(owner).call()).bignumber.zero;

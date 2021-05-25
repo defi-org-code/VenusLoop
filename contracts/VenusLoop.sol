@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./IVenusInterfaces.sol";
-import "hardhat/console.sol";
 
 contract VenusLoop {
     using SafeERC20 for IERC20;
@@ -17,7 +16,7 @@ contract VenusLoop {
     address public constant UNITROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant XVS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
     uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
-    address public immutable owner; // TODO add admin role
+    address public immutable owner;
 
     // ---- events ----
     event LogSupply(uint256 amount);
@@ -92,16 +91,15 @@ contract VenusLoop {
         return IComptroller(UNITROLLER).venusAccrued(address(this));
     }
 
-    function getAccountLiquidity()
-        public
-        view
-        returns (
-            uint256 err,
-            uint256 liquidity,
-            uint256 shortfall
-        )
-    {
-        return IComptroller(UNITROLLER).getAccountLiquidity(address(this));
+    function getAccountLiquidity() public view returns (uint256) {
+        (uint256 err, uint256 liquidity, uint256 shortfall) =
+            IComptroller(UNITROLLER).getAccountLiquidity(address(this));
+        require(err == 0 && shortfall == 0, "getAccountLiquidity failed");
+
+        uint256 price = PriceOracle(IComptroller(UNITROLLER).oracle()).getUnderlyingPrice(VUSDC);
+        liquidity = (liquidity * 1e18) / price;
+
+        return liquidity;
     }
 
     // ---- unrestricted ----
@@ -114,25 +112,24 @@ contract VenusLoop {
     // ---- main ----
     /**
      * iterations: number of leverage loops
-     * ratio: percent of liquidity to borrow each iteration. 1/100,000 (recommended 97.5% == 97,500)
+     * ratio: percent of liquidity to borrow each iteration. 100% == 100,000
      */
-    function enterPosition(uint256 iterations, uint256 ratio) external onlyOwner {
+    function enterPosition(uint256 iterations, uint256 ratio) external onlyOwner returns (uint256 endLiquidity) {
         _supply(getBalanceUSDC());
         for (uint256 i = 0; i < iterations; i++) {
             _borrowAndSupply(ratio);
         }
+        return getAccountLiquidity();
     }
 
     /**
      * Supports partial exits
      * maxIterations: max (upper bound) of exit deleverage loops
-     * ratio: percent of liquidity to redeem each iteration. 1/100,000 (recommended 121.118% == 121,118)
+     * ratio: percent of liquidity to redeem each iteration. 100% == 100,000
      */
-    function exitPosition(uint256 maxIterations, uint256 ratio) external onlyOwner returns (uint256 endingBalance) {
+    function exitPosition(uint256 maxIterations, uint256 ratio) external onlyOwner returns (uint256 endBalanceUSDC) {
         for (uint256 i = 0; getTotalBorrowedAccrued() > 0 && i < maxIterations; i++) {
-            console.log("exit", i);
             _redeemAndRepay(ratio);
-            console.log("exit ok");
         }
         if (getTotalBorrowedAccrued() == 0) {
             _redeemVTokens(IERC20(VUSDC).balanceOf(address(this)));
@@ -191,11 +188,10 @@ contract VenusLoop {
     }
 
     /**
-     * ratio: 1/100,000 (recommended 97.5% == 97,500)
+     * ratio: 100% == 100,000
      */
     function _borrowAndSupply(uint256 ratio) public onlyOwner {
-        (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
-        require(err == 0 && shortfall == 0, "_borrowAndSupply failed");
+        uint256 liquidity = getAccountLiquidity();
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
         _borrow(borrowAmount);
@@ -204,24 +200,27 @@ contract VenusLoop {
     }
 
     /**
-     * ratio: 1/100,000 (recommended 97.5% == 97,500)
+     * ratio: 100% == 100,000
      */
     function _redeemAndRepay(uint256 ratio) public onlyOwner {
-        (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity();
-        require(err == 0 && shortfall == 0, "_redeemAndRepay failed");
+        uint256 liquidity = getAccountLiquidity();
 
         (, uint256 collateralFactor) = IComptroller(UNITROLLER).markets(VUSDC);
         uint256 canWithdraw = ((liquidity * 1e18) / collateralFactor);
+
         uint256 redeemAmount = (canWithdraw * ratio) / PERCENT;
         _redeem(redeemAmount);
 
-        uint256 usdc = getBalanceUSDC();
-        uint256 borrowed = getTotalBorrowedAccrued();
-        if (usdc < borrowed) {
-            _repay(usdc);
-        } else {
-            _repay(type(uint256).max);
-        }
+        _repay(getBalanceUSDC());
+
+        //        uint256 usdc = getBalanceUSDC();
+        //        uint256 borrowed = getTotalBorrowedAccrued();
+        //        if (usdc < borrowed) {
+        //            _repay(usdc);
+        //        } else {
+        //            _repay(usdc);
+        //            //            _repay(type(uint256).max);
+        //        }
     }
 
     function _enterMarkets() private {

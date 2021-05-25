@@ -9,6 +9,45 @@ describe("VenusLoop E2E Tests", () => {
     await initOwnerAndUSDC();
   });
 
+  it("manual borrow and deposit", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+
+    await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods._borrowAndSupply(100_000).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
+    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("800,000"), bn6("1000"));
+    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("1,800,000"), bn6("1000"));
+    expect(await venusloop.methods.getAccountLiquidity().call()).bignumber.closeTo(bn6("640,000"), bn6("1000"));
+  });
+
+  it("manual redeem and repay", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods._borrowAndSupply(100_000).send({ from: owner });
+
+    await venusloop.methods._redeemAndRepay(100_000).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
+    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(zero, bn6("1000"));
+    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
+    expect(await venusloop.methods.getAccountLiquidity().call()).bignumber.closeTo(bn6("800,000"), bn6("1000"));
+  });
+
+  it("happy path", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
+
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
+    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("4,656,000"), bn6("1000"));
+    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("3,656,000"), bn6("1000"));
+    expect(await venusloop.methods.getAccountLiquidity().call()).bignumber.closeTo(bn6("68,719"), bn6("1000"));
+
+    await venusloop.methods.exitPosition(100, 100_000).send({ from: owner });
+    await expectOutOfPosition();
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
+  });
+
   // it("Show me the money", async () => {
   //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
   //
@@ -68,54 +107,6 @@ describe("VenusLoop E2E Tests", () => {
   //   console.log("health factor after 1 year:", fmt18(startHF), fmt18(endHF), "diff:", fmt18(endHF.sub(startHF)));
   //   expect(endHF).bignumber.lt(startHF).gt(ether); // must be > 1 to not be liquidated
   // });
-
-  it("manual borrow and deposit", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-
-    await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods._borrowAndSupply(97_500).send({ from: owner });
-
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("780,000"), bn6("1000"));
-    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("1,780,000"), bn6("1000"));
-    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
-      bn6("644,000"),
-      bn6("1000")
-    );
-  });
-
-  it("manual redeem and repay", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods._borrowAndSupply(97_500).send({ from: owner });
-
-    await venusloop.methods._redeemAndRepay(121_118).send({ from: owner });
-
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
-    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(zero, bn6("1000"));
-    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
-    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
-      bn6("800,000"),
-      bn6("1000")
-    );
-  });
-
-  it.only("happy path", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-    await venusloop.methods.enterPosition(11, 97_500).send({ from: owner });
-
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
-    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("4,632,000"), bn6("5000"));
-    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("3,632,000"), bn6("5000"));
-    expect((await venusloop.methods.getAccountLiquidity().call()).liquidity).bignumber.closeTo(
-      bn6("73,594"),
-      bn6("5000")
-    );
-
-    await venusloop.methods.exitPosition(100, 97_500).send({ from: owner });
-    await expectOutOfPosition();
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
-  });
 });
 
 function printAPY(endBalanceUSDC: BN, claimedBalance: BN) {

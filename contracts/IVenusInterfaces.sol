@@ -2,8 +2,14 @@
 // solhint-disable
 pragma solidity 0.8.4;
 
+interface PriceOracle {
+    function getUnderlyingPrice(address) external view returns (uint256);
+}
+
 interface IComptroller {
     function markets(address vToken) external view returns (bool, uint256);
+
+    function oracle() external view returns (address);
 
     function enterMarkets(address[] calldata vTokens) external returns (uint256[] memory);
 
