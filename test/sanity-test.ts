@@ -39,4 +39,8 @@ describe("VenusLoop Sanity Tests", () => {
 
     await expectRevert(() => venusloop.methods.withdrawAllUSDCToOwner().send());
   });
+
+  it("mutable admin", async () => {
+    // expect(await ven)
+  });
 });

@@ -23,7 +23,7 @@
     "@types/prompts": "^2.0.12",
     "bn.js": "^4.12.0",
     "chai": "^4.3.4",
-    "chai-bn": "^0.2.1",
+    "chai-bn": "git+https://github.com/defi-org-code/chai-bn.git",
     "hardhat": "^2.3.0",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-tracer": "^1.0.0-alpha.6",

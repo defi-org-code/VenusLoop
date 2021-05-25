@@ -30,7 +30,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://bsc-dataseed2.binance.org",
+        url: "https://misty-white-haze.bsc.quiknode.pro/18a20ffabf304a0b476b92ba91ea9aadaf6a3516/",
       },
       blockGasLimit: 12e6,
       accounts: {

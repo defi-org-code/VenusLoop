@@ -39,9 +39,9 @@ describe("VenusLoop E2E Tests", () => {
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
 
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
-    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("4,656,000"), bn6("1000"));
-    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("3,656,000"), bn6("1000"));
-    expect(await venusloop.methods.getAccountLiquidity().call()).bignumber.closeTo(bn6("68,719"), bn6("1000"));
+    expect(await venusloop.methods.getTotalSupplied().call()).bignumber.closeTo(bn6("4,656,000"), bn6("5000"));
+    expect(await venusloop.methods.getTotalBorrowed().call()).bignumber.closeTo(bn6("3,656,000"), bn6("5000"));
+    expect(await venusloop.methods.getAccountLiquidity().call()).bignumber.closeTo(bn6("68,719"), bn6("5000"));
 
     await venusloop.methods.exitPosition(100, 100_000).send({ from: owner });
     await expectOutOfPosition();

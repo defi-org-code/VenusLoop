@@ -17,6 +17,7 @@ contract VenusLoop {
     address public constant XVS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
     uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
     address public immutable owner;
+    address public admin;
 
     // ---- events ----
     event LogSupply(uint256 amount);
@@ -24,10 +25,12 @@ contract VenusLoop {
     event LogRedeem(uint256 amount);
     event LogRedeemVTokens(uint256 amount);
     event LogRepay(uint256 amount);
+    event LogSetAdmin(address newAdmin);
 
     // ---- constructor ----
     constructor(address _owner) {
         owner = _owner;
+        admin = _owner;
 
         IERC20(USDC).safeApprove(VUSDC, type(uint256).max);
         _enterMarkets();
@@ -35,8 +38,8 @@ contract VenusLoop {
 
     // ---- modifiers ----
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "onlyOwner");
+    modifier onlyOwnerOrAdmin() {
+        require(msg.sender == owner || msg.sender == admin, "onlyOwnerOrAdmin");
         _;
     }
 
@@ -114,7 +117,7 @@ contract VenusLoop {
      * iterations: number of leverage loops
      * ratio: percent of liquidity to borrow each iteration. 100% == 100,000
      */
-    function enterPosition(uint256 iterations, uint256 ratio) external onlyOwner returns (uint256 endLiquidity) {
+    function enterPosition(uint256 iterations, uint256 ratio) external onlyOwnerOrAdmin returns (uint256 endLiquidity) {
         _supply(getBalanceUSDC());
         for (uint256 i = 0; i < iterations; i++) {
             _borrowAndSupply(ratio);
@@ -127,7 +130,11 @@ contract VenusLoop {
      * maxIterations: max (upper bound) of exit deleverage loops
      * ratio: percent of liquidity to redeem each iteration. 100% == 100,000
      */
-    function exitPosition(uint256 maxIterations, uint256 ratio) external onlyOwner returns (uint256 endBalanceUSDC) {
+    function exitPosition(uint256 maxIterations, uint256 ratio)
+        external
+        onlyOwnerOrAdmin
+        returns (uint256 endBalanceUSDC)
+    {
         for (uint256 i = 0; getTotalBorrowedAccrued() > 0 && i < maxIterations; i++) {
             _redeemAndRepay(ratio);
         }
@@ -137,17 +144,22 @@ contract VenusLoop {
         return getBalanceUSDC();
     }
 
-    function withdrawAllUSDCToOwner() external onlyOwner {
+    function withdrawAllUSDCToOwner() external onlyOwnerOrAdmin {
         withdrawToOwner(USDC);
     }
 
-    // ---- internals, public onlyOwner in case of emergency ----
+    function setAdmin(address newAdmin) external onlyOwnerOrAdmin {
+        admin = newAdmin;
+        emit LogSetAdmin(newAdmin);
+    }
+
+    // ---- internals, public onlyOwnerOrAdmin in case of emergency ----
 
     /**
      * amount: USDC
      * generates interest
      */
-    function _supply(uint256 amount) public onlyOwner {
+    function _supply(uint256 amount) public onlyOwnerOrAdmin {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
         emit LogSupply(amount);
     }
@@ -156,7 +168,7 @@ contract VenusLoop {
      * withdraw from supply
      * amount: USDC
      */
-    function _redeem(uint256 amount) public onlyOwner {
+    function _redeem(uint256 amount) public onlyOwnerOrAdmin {
         require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "redeem failed");
         emit LogRedeem(amount);
     }
@@ -165,7 +177,7 @@ contract VenusLoop {
      * withdraw from supply
      * amount: VUSDC
      */
-    function _redeemVTokens(uint256 amountVUSDC) public onlyOwner {
+    function _redeemVTokens(uint256 amountVUSDC) public onlyOwnerOrAdmin {
         require(IVToken(VUSDC).redeem(amountVUSDC) == 0, "redeemVTokens failed");
         emit LogRedeemVTokens(amountVUSDC);
     }
@@ -173,7 +185,7 @@ contract VenusLoop {
     /**
      * amount: USDC
      */
-    function _borrow(uint256 amount) public onlyOwner {
+    function _borrow(uint256 amount) public onlyOwnerOrAdmin {
         require(IVToken(VUSDC).borrow(amount) == 0, "borrow failed");
         emit LogBorrow(amount);
     }
@@ -182,7 +194,7 @@ contract VenusLoop {
      * pay back debt
      * amount: USDC
      */
-    function _repay(uint256 amount) public onlyOwner {
+    function _repay(uint256 amount) public onlyOwnerOrAdmin {
         require(IVToken(VUSDC).repayBorrow(amount) == 0, "repay failed");
         emit LogRepay(amount);
     }
@@ -190,7 +202,7 @@ contract VenusLoop {
     /**
      * ratio: 100% == 100,000
      */
-    function _borrowAndSupply(uint256 ratio) public onlyOwner {
+    function _borrowAndSupply(uint256 ratio) public onlyOwnerOrAdmin {
         uint256 liquidity = getAccountLiquidity();
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
@@ -202,7 +214,7 @@ contract VenusLoop {
     /**
      * ratio: 100% == 100,000
      */
-    function _redeemAndRepay(uint256 ratio) public onlyOwner {
+    function _redeemAndRepay(uint256 ratio) public onlyOwnerOrAdmin {
         uint256 liquidity = getAccountLiquidity();
 
         (, uint256 collateralFactor) = IComptroller(UNITROLLER).markets(VUSDC);
@@ -211,16 +223,13 @@ contract VenusLoop {
         uint256 redeemAmount = (canWithdraw * ratio) / PERCENT;
         _redeem(redeemAmount);
 
-        _repay(getBalanceUSDC());
-
-        //        uint256 usdc = getBalanceUSDC();
-        //        uint256 borrowed = getTotalBorrowedAccrued();
-        //        if (usdc < borrowed) {
-        //            _repay(usdc);
-        //        } else {
-        //            _repay(usdc);
-        //            //            _repay(type(uint256).max);
-        //        }
+        uint256 usdc = getBalanceUSDC();
+        uint256 borrowed = getTotalBorrowedAccrued();
+        if (usdc < borrowed) {
+            _repay(usdc);
+        } else {
+            _repay(type(uint256).max);
+        }
     }
 
     function _enterMarkets() private {
@@ -231,16 +240,16 @@ contract VenusLoop {
 
     // ---- emergency ----
 
-    function withdrawToOwner(address asset) public onlyOwner {
+    function withdrawToOwner(address asset) public onlyOwnerOrAdmin {
         uint256 balance = IERC20(asset).balanceOf(address(this));
         IERC20(asset).safeTransfer(owner, balance);
     }
 
-    function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
+    function emergencyFunctionCall(address target, bytes memory data) external onlyOwnerOrAdmin {
         Address.functionCall(target, data);
     }
 
-    function emergencyFunctionDelegateCall(address target, bytes memory data) external onlyOwner {
+    function emergencyFunctionDelegateCall(address target, bytes memory data) external onlyOwnerOrAdmin {
         Address.functionDelegateCall(target, data);
     }
 }
