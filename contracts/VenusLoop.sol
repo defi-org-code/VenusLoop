@@ -10,16 +10,14 @@ import "./IVenusInterfaces.sol";
 contract VenusLoop {
     using SafeERC20 for IERC20;
 
-    // ---- fields ----
+    uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
     address public constant USDC = address(0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d);
     address public constant VUSDC = address(0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8);
     address public constant UNITROLLER = address(0xfD36E2c2a6789Db23113685031d7F16329158384);
     address public constant XVS = address(0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63);
-    uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
     address public immutable owner;
     address public admin;
 
-    // ---- events ----
     event LogSupply(uint256 amount);
     event LogBorrow(uint256 amount);
     event LogRedeem(uint256 amount);
@@ -27,7 +25,11 @@ contract VenusLoop {
     event LogRepay(uint256 amount);
     event LogSetAdmin(address newAdmin);
 
-    // ---- constructor ----
+    modifier restricted() {
+        require(msg.sender == owner || msg.sender == admin, "restricted");
+        _;
+    }
+
     constructor(address _owner) {
         owner = _owner;
         admin = _owner;
@@ -36,14 +38,45 @@ contract VenusLoop {
         _enterMarkets();
     }
 
-    // ---- modifiers ----
+    // ------------------------ main ------------------------
 
-    modifier onlyOwnerOrAdmin() {
-        require(msg.sender == owner || msg.sender == admin, "onlyOwnerOrAdmin");
-        _;
+    /**
+     * iterations: number of leverage loops
+     * ratio: percent of liquidity to borrow each iteration. 100% == 100,000
+     */
+    function enterPosition(uint256 iterations, uint256 ratio) external restricted returns (uint256 endLiquidity) {
+        _supply(getBalanceUSDC());
+        for (uint256 i = 0; i < iterations; i++) {
+            _borrowAndSupply(ratio);
+        }
+        return getAccountLiquidityAccrued();
     }
 
-    // ---- views ----
+    /**
+     * Supports partial exits
+     * maxIterations: max (upper bound) of exit deleverage loops
+     * ratio: percent of liquidity to redeem each iteration. 100% == 100,000
+     */
+    function exitPosition(uint256 maxIterations, uint256 ratio) external restricted returns (uint256 endBalanceUSDC) {
+        for (uint256 i = 0; getTotalBorrowedAccrued() > 0 && i < maxIterations; i++) {
+            _redeemAndRepay(ratio);
+        }
+        if (getTotalBorrowedAccrued() == 0) {
+            _redeemVTokens(IERC20(VUSDC).balanceOf(address(this)));
+        }
+        return getBalanceUSDC();
+    }
+
+    function withdrawAllUSDCToOwner() external restricted {
+        withdrawToOwner(USDC);
+    }
+
+    function setAdmin(address newAdmin) external restricted {
+        admin = newAdmin;
+        emit LogSetAdmin(newAdmin);
+    }
+
+    // ------------------------ unrestricted ------------------------
 
     /**
      * Underlying balance
@@ -80,9 +113,6 @@ contract VenusLoop {
         return IVToken(VUSDC).borrowBalanceCurrent(address(this));
     }
 
-    /**
-     * Claimed reward balance
-     */
     function getBalanceXVS() public view returns (uint256) {
         return IERC20(XVS).balanceOf(address(this));
     }
@@ -94,11 +124,16 @@ contract VenusLoop {
         return IComptroller(UNITROLLER).venusAccrued(address(this));
     }
 
-    function getAccountLiquidityAccrued() public returns (uint256) {
+    function claimRewardsToOwner() external returns (uint256 rewards) {
         IVToken(VUSDC).accrueInterest();
-        return getAccountLiquidity();
+        IComptroller(UNITROLLER).claimVenus(address(this));
+        rewards = getBalanceXVS();
+        IERC20(XVS).safeTransfer(owner, rewards);
     }
 
+    /**
+     * Account liquidity in USD, using Venus price oracle
+     */
     function getAccountLiquidity() public view returns (uint256) {
         (uint256 err, uint256 liquidity, uint256 shortfall) =
             IComptroller(UNITROLLER).getAccountLiquidity(address(this));
@@ -110,62 +145,18 @@ contract VenusLoop {
         return liquidity;
     }
 
-    // ---- unrestricted ----
-
-    function claimRewardsToOwner() external {
+    function getAccountLiquidityAccrued() public returns (uint256) {
         IVToken(VUSDC).accrueInterest();
-        IComptroller(UNITROLLER).claimVenus(address(this));
-        IERC20(XVS).safeTransfer(owner, getBalanceXVS());
+        return getAccountLiquidity();
     }
 
-    // ---- main ----
-    /**
-     * iterations: number of leverage loops
-     * ratio: percent of liquidity to borrow each iteration. 100% == 100,000
-     */
-    function enterPosition(uint256 iterations, uint256 ratio) external onlyOwnerOrAdmin returns (uint256 endLiquidity) {
-        _supply(getBalanceUSDC());
-        for (uint256 i = 0; i < iterations; i++) {
-            _borrowAndSupply(ratio);
-        }
-        return getAccountLiquidityAccrued();
-    }
-
-    /**
-     * Supports partial exits
-     * maxIterations: max (upper bound) of exit deleverage loops
-     * ratio: percent of liquidity to redeem each iteration. 100% == 100,000
-     */
-    function exitPosition(uint256 maxIterations, uint256 ratio)
-        external
-        onlyOwnerOrAdmin
-        returns (uint256 endBalanceUSDC)
-    {
-        for (uint256 i = 0; getTotalBorrowedAccrued() > 0 && i < maxIterations; i++) {
-            _redeemAndRepay(ratio);
-        }
-        if (getTotalBorrowedAccrued() == 0) {
-            _redeemVTokens(IERC20(VUSDC).balanceOf(address(this)));
-        }
-        return getBalanceUSDC();
-    }
-
-    function withdrawAllUSDCToOwner() external onlyOwnerOrAdmin {
-        withdrawToOwner(USDC);
-    }
-
-    function setAdmin(address newAdmin) external onlyOwnerOrAdmin {
-        admin = newAdmin;
-        emit LogSetAdmin(newAdmin);
-    }
-
-    // ---- internals, public onlyOwnerOrAdmin in case of emergency ----
+    // ------------------------ internals, exposed in case of emergency ------------------------
 
     /**
      * amount: USDC
      * generates interest
      */
-    function _supply(uint256 amount) public onlyOwnerOrAdmin {
+    function _supply(uint256 amount) public restricted {
         require(IVToken(VUSDC).mint(amount) == 0, "mint failed");
         emit LogSupply(amount);
     }
@@ -174,7 +165,7 @@ contract VenusLoop {
      * withdraw from supply
      * amount: USDC
      */
-    function _redeem(uint256 amount) public onlyOwnerOrAdmin {
+    function _redeem(uint256 amount) public restricted {
         require(IVToken(VUSDC).redeemUnderlying(amount) == 0, "redeem failed");
         emit LogRedeem(amount);
     }
@@ -183,7 +174,7 @@ contract VenusLoop {
      * withdraw from supply
      * amount: VUSDC
      */
-    function _redeemVTokens(uint256 amountVUSDC) public onlyOwnerOrAdmin {
+    function _redeemVTokens(uint256 amountVUSDC) public restricted {
         require(IVToken(VUSDC).redeem(amountVUSDC) == 0, "redeemVTokens failed");
         emit LogRedeemVTokens(amountVUSDC);
     }
@@ -191,7 +182,7 @@ contract VenusLoop {
     /**
      * amount: USDC
      */
-    function _borrow(uint256 amount) public onlyOwnerOrAdmin {
+    function _borrow(uint256 amount) public restricted {
         require(IVToken(VUSDC).borrow(amount) == 0, "borrow failed");
         emit LogBorrow(amount);
     }
@@ -200,7 +191,7 @@ contract VenusLoop {
      * pay back debt
      * amount: USDC
      */
-    function _repay(uint256 amount) public onlyOwnerOrAdmin {
+    function _repay(uint256 amount) public restricted {
         require(IVToken(VUSDC).repayBorrow(amount) == 0, "repay failed");
         emit LogRepay(amount);
     }
@@ -208,7 +199,7 @@ contract VenusLoop {
     /**
      * ratio: 100% == 100,000
      */
-    function _borrowAndSupply(uint256 ratio) public onlyOwnerOrAdmin {
+    function _borrowAndSupply(uint256 ratio) public restricted {
         uint256 liquidity = getAccountLiquidityAccrued();
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
@@ -220,7 +211,7 @@ contract VenusLoop {
     /**
      * ratio: 100% == 100,000
      */
-    function _redeemAndRepay(uint256 ratio) public onlyOwnerOrAdmin {
+    function _redeemAndRepay(uint256 ratio) public restricted {
         uint256 liquidity = getAccountLiquidityAccrued();
 
         (, uint256 collateralFactor) = IComptroller(UNITROLLER).markets(VUSDC);
@@ -244,18 +235,18 @@ contract VenusLoop {
         IComptroller(UNITROLLER).enterMarkets(markets);
     }
 
-    // ---- emergency ----
+    // ------------------------ emergency ------------------------
 
-    function withdrawToOwner(address asset) public onlyOwnerOrAdmin {
+    function withdrawToOwner(address asset) public restricted {
         uint256 balance = IERC20(asset).balanceOf(address(this));
         IERC20(asset).safeTransfer(owner, balance);
     }
 
-    function emergencyFunctionCall(address target, bytes memory data) external onlyOwnerOrAdmin {
+    function emergencyFunctionCall(address target, bytes memory data) external restricted {
         Address.functionCall(target, data);
     }
 
-    function emergencyFunctionDelegateCall(address target, bytes memory data) external onlyOwnerOrAdmin {
+    function emergencyFunctionDelegateCall(address target, bytes memory data) external restricted {
         Address.functionDelegateCall(target, data);
     }
 }

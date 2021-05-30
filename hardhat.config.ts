@@ -5,8 +5,7 @@ import "hardhat-tracer";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import { task } from "hardhat/config";
-import { bn18, configFile } from "./src/utils";
-import { askAddress, deploy } from "./src/deploy";
+import { askAddress, bn18, bscChainId, deploy } from "web3-extensions";
 
 task("deploy").setAction(async () => {
   const name = "VenusLoop";
@@ -15,6 +14,10 @@ task("deploy").setAction(async () => {
 
   await deploy(name, [owner], gasLimit, 0, false);
 });
+
+function configFile() {
+  return require("./.config.json");
+}
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -38,7 +41,7 @@ const config: HardhatUserConfig = {
       },
     },
     bsc: {
-      chainId: 56,
+      chainId: bscChainId,
       url: "https://bsc-dataseed4.binance.org",
     },
   },

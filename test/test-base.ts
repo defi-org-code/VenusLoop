@@ -1,18 +1,23 @@
 import BN from "bn.js";
-import { bn, bn6 } from "../src/utils";
-import { deployContract } from "../src/extensions";
-import { impersonate, resetNetworkFork, tag } from "../src/network";
-import { Wallet } from "../src/wallet";
 import { expect } from "chai";
 import { VenusLoop } from "../typechain-hardhat/VenusLoop";
-import { USDC } from "../src/token";
+import chai from "chai";
+import CBN from "chai-bn";
+import { account, bn, bn6, deployArtifact, erc20, impersonate, resetNetworkFork, tag, Tokens } from "web3-extensions";
 
 export const usdcWhale = "0xF977814e90dA44bFA03b6295A0616a897441aceC";
+
+export const VUSDC = erc20("$VUSDC", "0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8");
+export const XVS = erc20("$XVS", "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63");
 
 export let deployer: string;
 export let owner: string;
 export let venusloop: VenusLoop;
 export const POSITION = bn6("5,000,000");
+
+before(() => {
+  chai.use(CBN(BN));
+});
 
 export async function initOwnerAndUSDC() {
   while (true) {
@@ -29,27 +34,21 @@ async function doInitState() {
   await impersonate(usdcWhale);
   tag(usdcWhale, "USDC whale");
 
-  await initWallet();
+  deployer = await account(0);
+  tag(deployer, "deployer");
 
-  owner = (await Wallet.fake(1)).address;
-  venusloop = await deployContract<VenusLoop>("VenusLoop", { from: deployer }, [owner]);
+  owner = await account(1);
+  venusloop = await deployArtifact<VenusLoop>("VenusLoop", { from: deployer }, [owner]);
 
   await ensureBalanceUSDC(owner, POSITION);
-}
-
-async function initWallet() {
-  const wallet = await Wallet.fake();
-  wallet.setAsDefaultSigner();
-  deployer = wallet.address;
-  tag(deployer, "deployer");
 }
 
 /**
  * Takes USDC from whale ensuring minimum amount
  */
 async function ensureBalanceUSDC(address: string, amount: BN) {
-  if (bn(await USDC().methods.balanceOf(address).call()).lt(amount)) {
-    await USDC().methods.transfer(address, amount).send({ from: usdcWhale });
+  if (bn(await Tokens.bsc.USDC().methods.balanceOf(address).call()).lt(amount)) {
+    await Tokens.bsc.USDC().methods.transfer(address, amount).send({ from: usdcWhale });
   }
 }
 

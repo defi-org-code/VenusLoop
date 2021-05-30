@@ -1,19 +1,15 @@
-import BN from "bn.js";
-import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
-import { bn6, fmt6, zero, fmt18, bn, bn18, ether } from "../src/utils";
-import { XVS } from "../src/token";
-import { advanceTime, web3 } from "../src/network";
-import { USDC } from "../src/token";
+import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
 import { expect } from "chai";
+import { bn, bn6, contract, fmt6, max, mineBlocks, mineOneBlock, Tokens, zero } from "web3-extensions";
+import BN from "bn.js";
 
 describe("VenusLoop E2E Tests", () => {
   beforeEach(async () => {
     await initOwnerAndUSDC();
+    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
   });
 
   it("manual borrow and deposit", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-
     await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
     await venusloop.methods._borrowAndSupply(100_000).send({ from: owner });
 
@@ -24,7 +20,6 @@ describe("VenusLoop E2E Tests", () => {
   });
 
   it("manual redeem and repay", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
     await venusloop.methods._supply(bn6("1,000,000")).send({ from: owner });
     await venusloop.methods._borrowAndSupply(100_000).send({ from: owner });
 
@@ -37,7 +32,6 @@ describe("VenusLoop E2E Tests", () => {
   });
 
   it("happy path", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
 
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(zero, bn6("1000"));
@@ -50,34 +44,57 @@ describe("VenusLoop E2E Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
   });
 
-  it("show me the money", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
-
+  it.only("show me the money", async () => {
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
 
     const day = 60 * 60 * 24;
-    await advanceTime(day);
+    await mineBlocks(day, 3);
 
     await venusloop.methods.claimRewardsToOwner().send({ from: owner });
 
-    console.log(await XVS().methods.balanceOf(owner).call());
-
-    const rewardBalance = bn(await XVS().methods.balanceOf(owner).call());
+    console.log("calculated:");
+    const rewardBalance = bn(await XVS.methods.balanceOf(owner).call());
     console.log("rewardBalance", fmt6(rewardBalance));
     const rewardPrice = 32;
     console.log("assuming reward price in USD", rewardPrice, "$");
     const perDay = rewardBalance.muln(rewardPrice);
-    console.log("profit from rewards per day", fmt6(perDay));
-    const dailyRate = perDay.mul(bn6("1")).div(bn6("1,000,000")); // percent from principal
-    console.log("dailyRate:", fmt6(dailyRate.muln(100)), "%");
-    const APR = dailyRate.muln(365);
-    console.log("result APR: ", fmt6(APR.muln(100)), "%");
+    apyFromRewards(perDay, bn6("1,000,000"));
+
+    console.log("actual (by selling rewards):");
+    const routerAbi = [
+      {
+        inputs: [
+          { internalType: "uint256", name: "amountIn", type: "uint256" },
+          { internalType: "uint256", name: "amountOutMin", type: "uint256" },
+          { internalType: "address[]", name: "path", type: "address[]" },
+          { internalType: "address", name: "to", type: "address" },
+          { internalType: "uint256", name: "deadline", type: "uint256" },
+        ],
+        name: "swapExactTokensForTokens",
+        outputs: [{ internalType: "uint256[]", name: "amounts", type: "uint256[]" }],
+        stateMutability: "nonpayable",
+        type: "function",
+      },
+    ];
+    const router = contract(routerAbi, "0x10ED43C718714eb63d5aA57B78B54704E256024E");
+    await XVS.methods.approve(router.options.address, max).send({ from: owner });
+    const usdcBefore = bn(await Tokens.bsc.USDC().methods.balanceOf(owner).call());
+    await router.methods
+      .swapExactTokensForTokens(
+        rewardBalance,
+        0,
+        [XVS.options.address, Tokens.bsc.WBNB().options.address, Tokens.bsc.USDC().options.address],
+        owner,
+        max
+      )
+      .send({ from: owner });
+    const usdcAfter = bn(await Tokens.bsc.USDC().methods.balanceOf(owner).call());
+    const profit = usdcAfter.sub(usdcBefore);
+    apyFromRewards(profit, bn6("1,000,000"));
   });
 
   it("partial exits due to gas limits", async () => {
-    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-
     await venusloop.methods.enterPosition(20, 100_000).send({ from: owner });
     const startLeverage = await venusloop.methods.getTotalBorrowedAccrued().call();
     await venusloop.methods.exitPosition(10, 100_000).send({ from: owner });
@@ -85,18 +102,18 @@ describe("VenusLoop E2E Tests", () => {
     expect(midLeverage).bignumber.gt(zero).lt(startLeverage);
     await venusloop.methods.exitPosition(100, 100_000).send({ from: owner });
 
-    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(POSITION, bn6("3000")); // fee
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000")); // fee
     await expectOutOfPosition();
   });
 
-  it("health factor decay rate", async () => {
-    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+  it("liquidity after 1 year", async () => {
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
 
     const startLiquidity = bn(await venusloop.methods.getAccountLiquidityAccrued().call());
 
     const blocksPerYear = (60 * 60 * 24 * 365) / 3;
     require("ethereumjs-hooks").jumpBlocks(blocksPerYear);
+    await mineOneBlock(3);
 
     const endLiquidity = bn(await venusloop.methods.getAccountLiquidityAccrued().call());
 
@@ -110,3 +127,11 @@ describe("VenusLoop E2E Tests", () => {
     expect(endLiquidity).bignumber.lt(startLiquidity).gt(zero); // must be > 0 to not be liquidated
   });
 });
+
+function apyFromRewards(perDay: BN, principal: BN) {
+  console.log("profit from rewards per day", fmt6(perDay));
+  const dailyRate = perDay.mul(bn6("1")).div(principal); // percent from principal
+  console.log("dailyRate:", fmt6(dailyRate.muln(100)), "%");
+  const APR2 = dailyRate.muln(365);
+  console.log("result APR: ", fmt6(APR2.muln(100)), "%");
+}
