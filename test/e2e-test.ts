@@ -1,6 +1,8 @@
 import BN from "bn.js";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
-import { bn6, fmt6, zero } from "../src/utils";
+import { bn6, fmt6, zero, fmt18 } from "../src/utils";
+import { XVS } from "../src/token";
+import { advanceTime } from "../src/network";
 import { USDC } from "../src/token";
 import { expect } from "chai";
 
@@ -48,47 +50,54 @@ describe("VenusLoop E2E Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
   });
 
-  // it("Show me the money", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //
-  //   console.log("entering with 14 loops", fmt6(POSITION));
-  //   await venusloop.methods.enterPosition(14).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   const day = 60 * 60 * 24;
-  //   await advanceTime(day);
-  //
-  //   const rewardBalance = await venusloop.methods.getBalanceReward().call();
-  //   expect(rewardBalance).bignumber.greaterThan(zero);
-  //   console.log("rewards", fmt18(rewardBalance));
-  //
-  //   console.log("claim rewards");
-  //   await venusloop.methods.claimRewardsToOwner().send({ from: deployer });
-  //
-  //   const claimedBalance = bn(await stkvenus().methods.balanceOf(owner).call());
-  //   expect(claimedBalance).bignumber.greaterThan(zero).closeTo(rewardBalance, bn18("0.1"));
-  //   console.log("reward stkvenus", fmt18(claimedBalance));
-  //
-  //   console.log("exiting with 15 loops");
-  //   await venusloop.methods.exitPosition(15).send({ from: owner }); // +1 loop due to lower liquidity
-  //   const endBalanceUSDC = bn(await venusloop.methods.getBalanceUSDC().call());
-  //   expect(endBalanceUSDC).bignumber.greaterThan(POSITION);
-  //
-  //   await expectOutOfPosition();
-  //
-  //   printAPY(endBalanceUSDC, claimedBalance);
-  // });
-  //
+  // time delay test
+  it.only("Show me the money", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+
+    console.log("entering with 11 loops 1M ratio=100%");
+    await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
+
+    const day = 60 * 60 * 24;
+    await advanceTime(day * 1);
+
+    const totSupply = await venusloop.methods.getTotalSuppliedAccrued().send({ from: owner });
+    let rewardBalance = await venusloop.methods.getClaimableXVS().call();
+    console.log("rewards", fmt18(rewardBalance));
+
+    await venusloop.methods.claimRewardsToOwner().send({ from: owner });
+
+    //expect(rewardBalance).bignumber.greaterThan(zero);
+    rewardBalance = await XVS().methods.balanceOf(owner).call();
+    console.log("rewards2", fmt18(rewardBalance));
+
+    // console.log("claim rewards");
+    // await venusloop.methods.claimRewardsToOwner().send({ from: deployer });
+
+    // const claimedBalance = bn(await stkvenus().methods.balanceOf(owner).call());
+    // expect(claimedBalance).bignumber.greaterThan(zero).closeTo(rewardBalance, bn18("0.1"));
+    // console.log("reward stkvenus", fmt18(claimedBalance));
+
+    // console.log("exiting with 15 loops");
+    // await venusloop.methods.exitPosition(15).send({ from: owner }); // +1 loop due to lower liquidity
+    // const endBalanceUSDC = bn(await venusloop.methods.getBalanceUSDC().call());
+    // expect(endBalanceUSDC).bignumber.greaterThan(POSITION);
+
+    // await expectOutOfPosition();
+
+    // printAPY(endBalanceUSDC, claimedBalance);
+  });
+
   // it("partial exits due to gas limits", async () => {
   //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //
+
   //   await venusloop.methods.enterPosition(20).send({ from: owner });
   //   const startLeverage = await venusloop.methods.getBalanceDebtToken().call();
   //   await venusloop.methods.exitPosition(10).send({ from: owner });
   //   const midLeverage = await venusloop.methods.getBalanceDebtToken().call();
   //   expect(midLeverage).bignumber.gt(zero).lt(startLeverage);
   //   await venusloop.methods.exitPosition(100).send({ from: owner });
-  //
+
   //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.greaterThan(POSITION);
   //   await expectOutOfPosition();
   // });
