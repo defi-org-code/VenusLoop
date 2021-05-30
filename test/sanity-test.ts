@@ -9,7 +9,7 @@ import {
   deployer,
 } from "./test-base";
 import { expect } from "chai";
-import { account, Tokens } from "web3-extensions";
+import { account, erc20s } from "web3-extensions";
 
 describe("VenusLoop Sanity Tests", () => {
   beforeEach(async () => {
@@ -32,7 +32,7 @@ describe("VenusLoop Sanity Tests", () => {
   });
 
   it("access control", async () => {
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
     await expectRevert(() => venusloop.methods._supply(100).send({ from: deployer }));
     await expectRevert(() => venusloop.methods._borrow(50).send({ from: deployer }));
@@ -49,7 +49,7 @@ describe("VenusLoop Sanity Tests", () => {
   });
 
   it("mutable admin", async () => {
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
     expect(await venusloop.methods.admin().call())
       .eq(await venusloop.methods.owner().call())
       .eq(owner);
@@ -58,7 +58,7 @@ describe("VenusLoop Sanity Tests", () => {
     expect(await venusloop.methods.admin().call()).eq(other);
 
     await venusloop.methods.withdrawAllUSDCToOwner().send({ from: other });
-    expect(await Tokens.bsc.USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
-    expect(await Tokens.bsc.USDC().methods.balanceOf(owner).call()).bignumber.gte(POSITION);
+    expect(await erc20s.bsc.USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
+    expect(await erc20s.bsc.USDC().methods.balanceOf(owner).call()).bignumber.gte(POSITION);
   });
 });

@@ -1,12 +1,12 @@
 import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
 import { expect } from "chai";
-import { bn, bn6, contract, fmt6, max, mineBlocks, mineOneBlock, Tokens, zero } from "web3-extensions";
+import { bn, bn6, contract, erc20s, fmt6, max, mineBlocks, mineOneBlock, zero } from "web3-extensions";
 import BN from "bn.js";
 
 describe("VenusLoop E2E Tests", () => {
   beforeEach(async () => {
     await initOwnerAndUSDC();
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
   });
 
   it("manual borrow and deposit", async () => {
@@ -79,17 +79,17 @@ describe("VenusLoop E2E Tests", () => {
     ];
     const router = contract(routerAbi, "0x10ED43C718714eb63d5aA57B78B54704E256024E");
     await XVS.methods.approve(router.options.address, max).send({ from: owner });
-    const usdcBefore = bn(await Tokens.bsc.USDC().methods.balanceOf(owner).call());
+    const usdcBefore = bn(await erc20s.bsc.USDC().methods.balanceOf(owner).call());
     await router.methods
       .swapExactTokensForTokens(
         rewardBalance,
         0,
-        [XVS.options.address, Tokens.bsc.WBNB().options.address, Tokens.bsc.USDC().options.address],
+        [XVS.options.address, erc20s.bsc.WBNB().options.address, erc20s.bsc.USDC().options.address],
         owner,
         max
       )
       .send({ from: owner });
-    const usdcAfter = bn(await Tokens.bsc.USDC().methods.balanceOf(owner).call());
+    const usdcAfter = bn(await erc20s.bsc.USDC().methods.balanceOf(owner).call());
     const profit = usdcAfter.sub(usdcBefore);
     apyFromRewards(profit, bn6("1,000,000"));
   });

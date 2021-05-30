@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop, VUSDC } from "./test-base";
-import { bn6, max, Tokens } from "web3-extensions";
+import { bn6, max, erc20s } from "web3-extensions";
 
 describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {
@@ -8,37 +8,37 @@ describe("VenusLoop Emergency Tests", () => {
   });
 
   it("withdrawAllUSDCToOwner", async () => {
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
     await venusloop.methods.withdrawAllUSDCToOwner().send({ from: owner });
-    expect(await Tokens.bsc.USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
+    expect(await erc20s.bsc.USDC().methods.balanceOf(owner).call()).bignumber.eq(POSITION);
   });
 
   it("emergency function call", async () => {
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
-    const encoded = Tokens.bsc.USDC().methods.transfer(owner, POSITION).encodeABI();
-    await venusloop.methods.emergencyFunctionCall(Tokens.bsc.USDC().options.address, encoded).send({ from: owner });
+    const encoded = erc20s.bsc.USDC().methods.transfer(owner, POSITION).encodeABI();
+    await venusloop.methods.emergencyFunctionCall(erc20s.bsc.USDC().options.address, encoded).send({ from: owner });
 
-    const venusLoopBalance = await Tokens.bsc.USDC().methods.balanceOf(venusloop.options.address).call();
+    const venusLoopBalance = await erc20s.bsc.USDC().methods.balanceOf(venusloop.options.address).call();
     console.log("USDC venusLoopBalance", venusLoopBalance);
     expect(venusLoopBalance).bignumber.zero;
 
-    const ownerBalance = await Tokens.bsc.USDC().methods.balanceOf(owner).call();
+    const ownerBalance = await erc20s.bsc.USDC().methods.balanceOf(owner).call();
     console.log("USDC ownerBalance", ownerBalance);
     expect(ownerBalance).bignumber.eq(POSITION);
   });
 
   it.skip("emergency function delegate call", async () => {
     // upload a temp contract to use as lib (extension)
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, 1000).send({ from: owner });
-    const encoded = Tokens.bsc.USDC().methods.transfer(owner, 1000).encodeABI();
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, 1000).send({ from: owner });
+    const encoded = erc20s.bsc.USDC().methods.transfer(owner, 1000).encodeABI();
     await venusloop.methods
-      .emergencyFunctionDelegateCall(Tokens.bsc.USDC().options.address, encoded)
+      .emergencyFunctionDelegateCall(erc20s.bsc.USDC().options.address, encoded)
       .send({ from: owner });
   });
 
   it("exit position one by one manually", async () => {
-    await Tokens.bsc.USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
 
