@@ -75,20 +75,19 @@ describe("VenusLoop E2E Tests", () => {
     console.log("result APR: ", fmt6(APR.muln(100)), "%");
   });
 
-  // it("partial exits due to gas limits", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+  it("partial exits due to gas limits", async () => {
+    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
 
-  //   await venusloop.methods.enterPosition(20).send({ from: owner });
-  //   const startLeverage = await venusloop.methods.getBalanceDebtToken().call();
-  //   await venusloop.methods.exitPosition(10).send({ from: owner });
-  //   const midLeverage = await venusloop.methods.getBalanceDebtToken().call();
-  //   expect(midLeverage).bignumber.gt(zero).lt(startLeverage);
-  //   await venusloop.methods.exitPosition(100).send({ from: owner });
+    await venusloop.methods.enterPosition(20, 100_000).send({ from: owner });
+    const startLeverage = await venusloop.methods.getTotalBorrowedAccrued().call();
+    await venusloop.methods.exitPosition(10, 100_000).send({ from: owner });
+    const midLeverage = await venusloop.methods.getTotalBorrowedAccrued().call();
+    expect(midLeverage).bignumber.gt(zero).lt(startLeverage);
+    await venusloop.methods.exitPosition(100, 100_000).send({ from: owner });
 
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.greaterThan(POSITION);
-  //   await expectOutOfPosition();
-  // });
-  //
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(POSITION, bn6("3000")); // fee
+    await expectOutOfPosition();
+  });
 
   it("health factor decay rate", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });

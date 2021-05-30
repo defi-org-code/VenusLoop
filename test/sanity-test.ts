@@ -1,6 +1,7 @@
 import { expectOutOfPosition, initOwnerAndUSDC, POSITION, venusloop, owner, expectRevert } from "./test-base";
 import { expect } from "chai";
 import { USDC, XVS } from "../src/token";
+import { Wallet } from "../src/wallet";
 
 describe("VenusLoop Sanity Tests", () => {
   beforeEach(async () => {
@@ -41,6 +42,16 @@ describe("VenusLoop Sanity Tests", () => {
   });
 
   it("mutable admin", async () => {
-    // expect(await ven)
+    await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
+    expect(await venusloop.methods.admin().call())
+      .eq(await venusloop.methods.owner().call())
+      .eq(owner);
+    const other = (await Wallet.fake(2)).address;
+    await venusloop.methods.setAdmin(other).send({ from: owner });
+    expect(await venusloop.methods.admin().call()).eq(other);
+
+    await venusloop.methods.withdrawAllUSDCToOwner().send({ from: other });
+    expect(await USDC().methods.balanceOf(venusloop.options.address).call()).bignumber.zero;
+    expect(await USDC().methods.balanceOf(owner).call()).bignumber.gte(POSITION);
   });
 });
