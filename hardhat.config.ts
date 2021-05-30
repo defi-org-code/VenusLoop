@@ -30,7 +30,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://misty-white-haze.bsc.quiknode.pro/18a20ffabf304a0b476b92ba91ea9aadaf6a3516/",
+        url: "https://bsc-dataseed4.binance.org",
       },
       blockGasLimit: 12e6,
       accounts: {
@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
     },
     bsc: {
       chainId: 56,
-      url: "https://bsc-dataseed.binance.org",
+      url: "https://bsc-dataseed4.binance.org",
     },
   },
   typechain: {
@@ -48,7 +48,7 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 500_000,
-    retries: 1,
+    retries: 0,
     bail: true,
   },
   gasReporter: {

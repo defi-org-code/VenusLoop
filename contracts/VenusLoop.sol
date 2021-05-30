@@ -108,6 +108,7 @@ contract VenusLoop {
     // ---- unrestricted ----
 
     function claimRewardsToOwner() external {
+        IVToken(VUSDC).accrueInterest();
         IComptroller(UNITROLLER).claimVenus(address(this));
         IERC20(XVS).safeTransfer(owner, getBalanceXVS());
     }

@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
-import { bn6, fmt6, zero, fmt18 } from "../src/utils";
+import { bn6, fmt6, zero, fmt18, bn, bn18, ether } from "../src/utils";
 import { XVS } from "../src/token";
 import { advanceTime } from "../src/network";
 import { USDC } from "../src/token";
@@ -50,42 +50,29 @@ describe("VenusLoop E2E Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
   });
 
-  // time delay test
-  it.only("Show me the money", async () => {
+  it.only("show me the money", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
 
-    console.log("entering with 11 loops 1M ratio=100%");
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
 
     const day = 60 * 60 * 24;
-    await advanceTime(day * 1);
-
-    const totSupply = await venusloop.methods.getTotalSuppliedAccrued().send({ from: owner });
-    let rewardBalance = await venusloop.methods.getClaimableXVS().call();
-    console.log("rewards", fmt18(rewardBalance));
+    await advanceTime(day);
 
     await venusloop.methods.claimRewardsToOwner().send({ from: owner });
 
-    //expect(rewardBalance).bignumber.greaterThan(zero);
-    rewardBalance = await XVS().methods.balanceOf(owner).call();
-    console.log("rewards2", fmt18(rewardBalance));
+    console.log(await XVS().methods.balanceOf(owner).call());
 
-    // console.log("claim rewards");
-    // await venusloop.methods.claimRewardsToOwner().send({ from: deployer });
-
-    // const claimedBalance = bn(await stkvenus().methods.balanceOf(owner).call());
-    // expect(claimedBalance).bignumber.greaterThan(zero).closeTo(rewardBalance, bn18("0.1"));
-    // console.log("reward stkvenus", fmt18(claimedBalance));
-
-    // console.log("exiting with 15 loops");
-    // await venusloop.methods.exitPosition(15).send({ from: owner }); // +1 loop due to lower liquidity
-    // const endBalanceUSDC = bn(await venusloop.methods.getBalanceUSDC().call());
-    // expect(endBalanceUSDC).bignumber.greaterThan(POSITION);
-
-    // await expectOutOfPosition();
-
-    // printAPY(endBalanceUSDC, claimedBalance);
+    const rewardBalance = bn(await XVS().methods.balanceOf(owner).call());
+    console.log("rewardBalance", fmt6(rewardBalance));
+    const rewardPrice = 32;
+    console.log("assuming reward price in USD", rewardPrice, "$");
+    const perDay = rewardBalance.muln(rewardPrice);
+    console.log("profit from rewards per day", fmt6(perDay));
+    const dailyRate = perDay.mul(bn6("1")).div(bn6("1,000,000")); // percent from principal
+    console.log("dailyRate:", fmt6(dailyRate.muln(100)), "%");
+    const APR = dailyRate.muln(365);
+    console.log("result APR: ", fmt6(APR.muln(100)), "%");
   });
 
   // it("partial exits due to gas limits", async () => {
@@ -117,24 +104,3 @@ describe("VenusLoop E2E Tests", () => {
   //   expect(endHF).bignumber.lt(startHF).gt(ether); // must be > 1 to not be liquidated
   // });
 });
-
-function printAPY(endBalanceUSDC: BN, claimedBalance: BN) {
-  console.log("=================");
-  const profitFromInterest = endBalanceUSDC.sub(POSITION);
-  console.log("profit from interest", fmt6(profitFromInterest));
-  const stkvenusPrice = 470;
-  console.log("assuming stkvenus price in USD", stkvenusPrice, "$");
-  const profitFromRewards = claimedBalance.muln(stkvenusPrice).div(bn6("1,000,000")); // 18->6 decimals
-  console.log("profit from rewards", fmt6(profitFromRewards));
-  const profit = profitFromInterest.add(profitFromRewards);
-
-  const dailyRate = profit.mul(bn6("1")).div(POSITION);
-  console.log("dailyRate:", fmt6(dailyRate.muln(100)), "%");
-
-  const APR = dailyRate.muln(365);
-  console.log("result APR: ", fmt6(APR.muln(100)), "%");
-
-  const APY = Math.pow(1 + parseFloat(fmt6(dailyRate)), 365) - 1;
-  console.log("result APY: ", APY * 100, "%");
-  console.log("=================");
-}
