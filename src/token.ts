@@ -8,6 +8,10 @@ export function USDC() {
   return newToken("$USDC", "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d");
 }
 
+export function VUSDC() {
+  return newToken("$VUSDC", "0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8");
+}
+
 export function XVS() {
   return newToken("$XVS", "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63");
 }
