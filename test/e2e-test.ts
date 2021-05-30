@@ -2,7 +2,7 @@ import BN from "bn.js";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
 import { bn6, fmt6, zero, fmt18, bn, bn18, ether } from "../src/utils";
 import { XVS } from "../src/token";
-import { advanceTime } from "../src/network";
+import { advanceTime, web3 } from "../src/network";
 import { USDC } from "../src/token";
 import { expect } from "chai";
 
@@ -50,7 +50,7 @@ describe("VenusLoop E2E Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
   });
 
-  it.only("show me the money", async () => {
+  it("show me the money", async () => {
     await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
 
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
@@ -89,18 +89,25 @@ describe("VenusLoop E2E Tests", () => {
   //   await expectOutOfPosition();
   // });
   //
-  // it("health factor decay rate", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //   await venusloop.methods.enterPosition(14).send({ from: owner });
-  //
-  //   const startHF = bn((await venusloop.methods.getPositionData().call()).healthFactor);
-  //
-  //   const year = 60 * 60 * 24 * 365;
-  //   await jumpTime(year);
-  //
-  //   const endHF = bn((await venusloop.methods.getPositionData().call()).healthFactor);
-  //
-  //   console.log("health factor after 1 year:", fmt18(startHF), fmt18(endHF), "diff:", fmt18(endHF.sub(startHF)));
-  //   expect(endHF).bignumber.lt(startHF).gt(ether); // must be > 1 to not be liquidated
-  // });
+
+  it("health factor decay rate", async () => {
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
+
+    const startLiquidity = bn(await venusloop.methods.getAccountLiquidityAccrued().call());
+
+    const blocksPerYear = (60 * 60 * 24 * 365) / 3;
+    require("ethereumjs-hooks").jumpBlocks(blocksPerYear);
+
+    const endLiquidity = bn(await venusloop.methods.getAccountLiquidityAccrued().call());
+
+    console.log(
+      "liquidity after 1 year:",
+      fmt6(startLiquidity),
+      fmt6(endLiquidity),
+      "diff:",
+      fmt6(endLiquidity.sub(startLiquidity))
+    );
+    expect(endLiquidity).bignumber.lt(startLiquidity).gt(zero); // must be > 0 to not be liquidated
+  });
 });

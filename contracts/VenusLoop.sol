@@ -94,6 +94,11 @@ contract VenusLoop {
         return IComptroller(UNITROLLER).venusAccrued(address(this));
     }
 
+    function getAccountLiquidityAccrued() public returns (uint256) {
+        IVToken(VUSDC).accrueInterest();
+        return getAccountLiquidity();
+    }
+
     function getAccountLiquidity() public view returns (uint256) {
         (uint256 err, uint256 liquidity, uint256 shortfall) =
             IComptroller(UNITROLLER).getAccountLiquidity(address(this));
@@ -123,7 +128,7 @@ contract VenusLoop {
         for (uint256 i = 0; i < iterations; i++) {
             _borrowAndSupply(ratio);
         }
-        return getAccountLiquidity();
+        return getAccountLiquidityAccrued();
     }
 
     /**
@@ -204,7 +209,7 @@ contract VenusLoop {
      * ratio: 100% == 100,000
      */
     function _borrowAndSupply(uint256 ratio) public onlyOwnerOrAdmin {
-        uint256 liquidity = getAccountLiquidity();
+        uint256 liquidity = getAccountLiquidityAccrued();
 
         uint256 borrowAmount = (liquidity * ratio) / PERCENT;
         _borrow(borrowAmount);
@@ -216,7 +221,7 @@ contract VenusLoop {
      * ratio: 100% == 100,000
      */
     function _redeemAndRepay(uint256 ratio) public onlyOwnerOrAdmin {
-        uint256 liquidity = getAccountLiquidity();
+        uint256 liquidity = getAccountLiquidityAccrued();
 
         (, uint256 collateralFactor) = IComptroller(UNITROLLER).markets(VUSDC);
         uint256 canWithdraw = ((liquidity * 1e18) / collateralFactor);

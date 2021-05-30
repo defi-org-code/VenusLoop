@@ -24,6 +24,7 @@
     "bn.js": "^4.12.0",
     "chai": "^4.3.4",
     "chai-bn": "git+https://github.com/defi-org-code/chai-bn.git",
+    "ethereumjs-hooks": "git+https://github.com/defi-org-code/ethereumjs-hooks.git",
     "hardhat": "^2.3.0",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-tracer": "^1.0.0-alpha.6",
@@ -40,6 +41,7 @@
     "web3-parse-receipt-events": "^1.0.2"
   },
   "scripts": {
+    "postinstall": "ethereumjs-hooks",
     "prettier": "prettier --write '{test,src,contracts,scripts}/**/*.{ts,js,json,sol}'",
     "typechain": "typechain --target=web3-v1 --out-dir=typechain-abi 'abi/**/*.json' && npx hardhat typechain",
     "prebuild": "rm -rf artifacts && rm -rf typechain-hardhat && rm -rf typechain-abi && npm run prettier && npm run typechain",
