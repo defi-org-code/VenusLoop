@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { USDC } from "../src/token";
-import { initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
-import { bn6 } from "../src/utils";
+import { USDC, VUSDC } from "../src/token";
+import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop } from "./test-base";
+import { bn6, bn8, max } from "../src/utils";
 
 describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {
@@ -40,6 +40,7 @@ describe("VenusLoop Emergency Tests", () => {
     expect(ownerBalance).bignumber.eq(POSITION);
   });
 
+  // Skipped
   it.skip("emergency function delegate call", async () => {
     // upload a temp contract to use as lib (extension)
     await USDC().methods.transfer(venusloop.options.address, 1000).send({ from: owner });
@@ -47,40 +48,97 @@ describe("VenusLoop Emergency Tests", () => {
     await venusloop.methods.emergencyFunctionDelegateCall(USDC().options.address, encoded).send({ from: owner });
   });
 
-  //
-  // it("exit position one by one manually", async () => {
-  //   await USDC().methods.transfer(venusloop.options.address, POSITION).send({ from: owner });
-  //
-  //   await venusloop.methods.enterPosition(5).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods._withdraw(bn6("1,638,000")).send({ from: owner });
-  //   await venusloop.methods._repay(bn6("1,638,000")).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods._withdraw(bn6("2,048,000")).send({ from: owner });
-  //   await venusloop.methods._repay(bn6("2,048,000")).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods._withdraw(bn6("2,560,000")).send({ from: owner });
-  //   await venusloop.methods._repay(bn6("2,560,000")).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods._withdraw(bn6("3,200,000")).send({ from: owner });
-  //   await venusloop.methods._repay(bn6("3,200,000")).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods._withdraw(bn6("4,000,000")).send({ from: owner });
-  //   await venusloop.methods._repay(bn6("4,000,000")).send({ from: owner });
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
-  //
-  //   await venusloop.methods._withdraw(bn6("1,000")).send({ from: owner });
-  //   await venusloop.methods._repay(bn6("1,000")).send({ from: owner });
-  //
-  //   await venusloop.methods._withdraw(max).send({ from: owner });
-  //
-  //   expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.greaterThan(POSITION);
-  //
-  //   await expectOutOfPosition();
-  // });
+  it("exit position one by one manually", async () => {
+    // enter position
+    await USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
+    await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
+    //
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
+
+    // Iterations 800000	(rounding iteration) 640000	512000	409600	327680	262144	209715	167772	134218	107374	85899	68719
+    let usdc;
+
+    // rounding original number
+    await venusloop.methods._redeem(bn6("68,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("85,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("107,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("134,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("167,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("209,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("262,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("327,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("409,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("512,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    await venusloop.methods._redeem(bn6("640,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    console.log("+++last Iter have left over from previous round down");
+
+    await venusloop.methods._redeem(bn6("652,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(usdc).send({ from: owner });
+    console.log("repay usdc = ", usdc);
+
+    // repay max
+
+    await venusloop.methods._redeem(bn6("148,000")).send({ from: owner });
+    usdc = await venusloop.methods.getBalanceUSDC().call();
+    await venusloop.methods._repay(max).send({ from: owner });
+
+    // redeam v token
+    console.log("redeam remaining vtoken after last round");
+    let vusdc = await VUSDC().methods.balanceOf(venusloop.options.address).call();
+    console.log("redeem vusdc left: ", vusdc);
+    await venusloop.methods._redeemVTokens(vusdc).send({ from: owner });
+
+    // out of position
+    await expectOutOfPosition();
+
+    // less than 1m withdraw fees
+    expect(await venusloop.methods.getBalanceUSDC().call())
+      .bignumber.closeTo(bn6("1,000,000"), bn6("1,000"))
+      .lessThan(bn6("1,000,000"));
+  });
 });
