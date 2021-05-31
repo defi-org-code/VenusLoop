@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop, VUSDC } from "./test-base";
-import { bn6, max, erc20s } from "web3-extensions";
+import { bn6, max, erc20s } from "web3-candies";
 
 describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {

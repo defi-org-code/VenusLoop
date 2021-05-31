@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "ethereumjs-hooks": "git+https://github.com/defi-org-code/ethereumjs-hooks.git",
-    "web3-extensions": "git+https://github.com/defi-org-code/web3-extensions.git"
+    "web3-candies": "git+https://github.com/defi-org-code/web3-candies.git"
   },
   "scripts": {
     "postinstall": "ethereumjs-hooks",

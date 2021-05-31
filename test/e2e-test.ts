@@ -1,7 +1,8 @@
-import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
-import { expect } from "chai";
-import { bn, bn6, contract, erc20s, fmt6, max, mineBlocks, mineOneBlock, zero } from "web3-extensions";
 import BN from "bn.js";
+import { expect } from "chai";
+import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
+import { bn, bn6, contract, erc20s, fmt6, max, mineBlocks, zero } from "web3-candies";
+import { jumpBlocks } from "ethereumjs-hooks";
 
 describe("VenusLoop E2E Tests", () => {
   beforeEach(async () => {
@@ -44,7 +45,7 @@ describe("VenusLoop E2E Tests", () => {
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1000"));
   });
 
-  it.only("show me the money", async () => {
+  it("show me the money", async () => {
     await venusloop.methods.enterPosition(11, 100_000).send({ from: owner });
     expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
 
@@ -112,8 +113,7 @@ describe("VenusLoop E2E Tests", () => {
     const startLiquidity = bn(await venusloop.methods.getAccountLiquidityAccrued().call());
 
     const blocksPerYear = (60 * 60 * 24 * 365) / 3;
-    require("ethereumjs-hooks").jumpBlocks(blocksPerYear);
-    await mineOneBlock(3);
+    jumpBlocks(blocksPerYear);
 
     const endLiquidity = bn(await venusloop.methods.getAccountLiquidityAccrued().call());
 
