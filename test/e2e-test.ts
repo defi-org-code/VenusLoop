@@ -64,7 +64,7 @@ describe("VenusLoop E2E Tests", () => {
     apyFromRewards(perDay, bn6("1,000,000"));
 
     console.log("actual (by selling rewards):");
-    const routerAbi = [
+    const routerAbi: Abi = [
       {
         inputs: [
           { internalType: "uint256", name: "amountIn", type: "uint256" },

@@ -90,8 +90,6 @@ describe("VenusLoop Emergency Tests", () => {
     await expectOutOfPosition();
 
     // up to 0.1% withdrawal fee
-    expect(await venusloop.methods.getBalanceUSDC().call())
-      .bignumber.closeTo(bn6("1,000,000"), bn6("1,000"))
-      .lessThan(bn6("1,000,000"));
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1,000"));
   });
 });
