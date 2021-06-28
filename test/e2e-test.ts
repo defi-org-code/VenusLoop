@@ -1,8 +1,9 @@
 import BN from "bn.js";
 import { expect } from "chai";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
-import { bn, bn6, contract, erc20s, fmt6, max, mineBlocks, zero } from "web3-candies";
+import { bn, bn6, contract, erc20s, fmt6, max, mineBlocks, zero } from "@defi.org/web3-candies";
 import { jumpBlocks } from "ethereumjs-hooks";
+import { Abi } from "@defi.org/web3-candies/dist/contracts";
 
 describe("VenusLoop E2E Tests", () => {
   beforeEach(async () => {

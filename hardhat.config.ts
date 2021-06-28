@@ -5,7 +5,7 @@ import "hardhat-tracer";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
 import { task } from "hardhat/config";
-import { askAddress, bn18, bscChainId, deploy } from "web3-candies";
+import { askAddress, bn18, bscChainId, deploy } from "@defi.org/web3-candies";
 
 task("deploy").setAction(async () => {
   const name = "VenusLoop";

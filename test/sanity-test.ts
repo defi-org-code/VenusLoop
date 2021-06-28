@@ -9,7 +9,7 @@ import {
   deployer,
 } from "./test-base";
 import { expect } from "chai";
-import { account, erc20s } from "web3-candies";
+import { account, erc20s } from "@defi.org/web3-candies";
 
 describe("VenusLoop Sanity Tests", () => {
   beforeEach(async () => {

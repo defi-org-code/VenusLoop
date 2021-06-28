@@ -11,8 +11,8 @@
     "@openzeppelin/contracts": "^4.1.0"
   },
   "devDependencies": {
-    "ethereumjs-hooks": "git+https://github.com/defi-org-code/ethereumjs-hooks.git",
-    "web3-candies": "git+https://github.com/defi-org-code/web3-candies.git"
+    "@defi.org/web3-candies": "1.x",
+    "ethereumjs-hooks": "git+https://github.com/defi-org-code/ethereumjs-hooks.git"
   },
   "scripts": {
     "postinstall": "ethereumjs-hooks",

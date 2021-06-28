@@ -3,7 +3,17 @@ import { expect } from "chai";
 import { VenusLoop } from "../typechain-hardhat/VenusLoop";
 import chai from "chai";
 import CBN from "chai-bn";
-import { account, bn, bn6, deployArtifact, erc20, impersonate, resetNetworkFork, tag, erc20s } from "web3-candies";
+import {
+  account,
+  bn,
+  bn6,
+  deployArtifact,
+  erc20,
+  impersonate,
+  resetNetworkFork,
+  tag,
+  erc20s,
+} from "@defi.org/web3-candies";
 
 export const usdcWhale = "0xF977814e90dA44bFA03b6295A0616a897441aceC";
 
